@@ -12,8 +12,22 @@ android {
         applicationId = "dev.eunomie.focus.spike"
         minSdk = 33
         targetSdk = 36
-        versionCode = 1
+        versionCode = 3
         versionName = "0.1-spike"
+    }
+
+    // Each Dagger build runs in a fresh container, which would otherwise generate a
+    // new debug keystore every time and make `adb install -r` fail with
+    // INSTALL_FAILED_UPDATE_INCOMPATIBLE. This keystore is the standard Android debug
+    // key -- well-known password, no secret in it -- committed so rebuilds stay
+    // signature-stable and reinstall over the top.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildFeatures { compose = true }
