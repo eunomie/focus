@@ -17,10 +17,10 @@ git config user.email "yves.brissaud@gmail.com"
 Local to this repo only, never `--global`. `Signed-off-by:` trailers use the
 same personal address.
 
-**No app code yet.** The design is reviewed and the scope is settled — see
-[ADR 5](docs/decisions/0005-v1-scope.md). What comes next is a throwaway
-platform spike, not the app; the spike exists to answer the questions that could
-still change the architecture, so building the real thing first wastes it.
+**No app code yet, but the design is finished.** Scope is settled in
+[ADR 5](docs/decisions/0005-v1-scope.md) and [ADR 6](docs/decisions/0006-device-state-effects.md),
+and every platform mechanism it depends on was verified on the real Pixel 6 —
+the throwaway spike that proved them has been deleted. Next step is building v1.
 
 **No AI attribution.** Not in commits, patches, PR titles or bodies. No
 `Co-Authored-By` lines for agents.

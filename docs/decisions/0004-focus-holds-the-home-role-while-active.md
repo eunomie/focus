@@ -37,8 +37,14 @@ ends, rather than holding it permanently.
 
 ## Verification
 
-Measured on the actual target — Pixel 6, **Android 17 (SDK 37)** — with the
-throwaway spike in `spike/`.
+Measured on the actual target — Pixel 6, **Android 17 (SDK 37)** — with a
+throwaway spike, since deleted. The working probe code is worth cribbing from
+when the real app implements these mechanisms:
+
+```sh
+git show ae87bcf271eb:spike/app/src/main/java/dev/eunomie/focus/spike/Probe.kt
+git show ae87bcf271eb:spike/app/src/main/java/dev/eunomie/focus/spike/Wallpaper.kt
+```
 
 | Claim | Result |
 |---|---|

@@ -14,14 +14,14 @@ dagger.toml                          workspace: dang SDK + local modules
 ```sh
 dagger check                                            # ✔ focus:check
 dagger call android versions                            # JDK / Gradle / SDK in the toolchain
-dagger call focus spike-apk export --path=/tmp/spike.apk   # build the platform spike
 ```
 
 The `android` module builds a JDK 21 container with pinned Android
 cmdline-tools, platform 36, build-tools 36.0.0 and Gradle 8.14.3, accepts the
 SDK licences in the same cached layer, and exposes a `gradle(source, task)`
-runner with the Gradle home mounted as a cache volume. `focus` composes it into
-`spikeApk`, which produces an installable debug APK.
+runner with the Gradle home mounted as a cache volume. It was proven end-to-end building the
+platform spike, and currently has no consumer — wiring `focus.apk` onto it is
+the first build job once app code lands.
 
 `focus:check` still only asserts that the workspace mounts and a container runs.
 It stays a placeholder until there is app code with real tests.

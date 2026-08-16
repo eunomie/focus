@@ -24,22 +24,23 @@ in a browser, it is a self-contained HTML doc with mockups and diagrams.
 open questions answered — see [ADR 5](docs/decisions/0005-v1-scope.md) for the
 answers, which are the authoritative statement of what v1 is.
 
-The **platform spike** is written and builds to an APK, but has not been run on
-the phone yet — that needs a physical Pixel 6, so it is Yves's step, not an
-agent's. It answers the only questions that could still change the architecture:
-whether `ROLE_HOME` can be taken and handed back, how much the
-gesture-navigation tax hurts, and whether greyscale and the notification
-listener behave. **Don't start the real app before those answers exist**, and
-record them in ADR 4 when they do. Runbook: [`docs/spike.md`](docs/spike.md).
+The platform spike is **done and deleted** — every mechanism the design depends
+on was verified on the real Pixel 6 running Android 17. The results are in
+[ADR 4](docs/decisions/0004-focus-holds-the-home-role-while-active.md) and
+[ADR 6](docs/decisions/0006-device-state-effects.md), and those ADRs say where
+in git history to find the working probe code.
+
+**Nothing in the design now rests on an unverified assumption.** What remains is
+building v1 as scoped in [ADR 5](docs/decisions/0005-v1-scope.md) and ADR 6.
 
 What exists today:
 
-- The design doc + mockups (`docs/`), and the settled scope in ADR 5.
+- The design doc + mockups (`docs/`), and the settled scope in ADR 5 + ADR 6.
+- Six ADRs, all Accepted, all backed by on-device measurement where they make a
+  platform claim.
 - A working Dagger toolchain: `.dagger/modules/android/` (Android SDK + Gradle
   in a container) and `.dagger/modules/focus/`. See
   [`docs/build-tooling.md`](docs/build-tooling.md).
-- `spike/` — the throwaway platform probe. Builds to an installable APK.
-  Runbook: [`docs/spike.md`](docs/spike.md).
 
 ## Repo layout
 
@@ -49,11 +50,9 @@ CLAUDE.md                  pointer to this file + the non-negotiables
 dagger.toml                Dagger workspace: dang SDK + local modules
 .dagger/modules/android/   Android SDK + Gradle toolchain (dang)
 .dagger/modules/focus/     the repo's own Dagger module (dang)
-spike/                     throwaway platform probe (delete after the spike)
 docs/
   README.md                doc conventions
   build-tooling.md         Dagger toolchain: what exists, what's planned
-  spike.md                 platform spike runbook
   design/                  design docs (HTML, self-contained, with mockups)
   decisions/               ADRs — short records of decisions and their why
 ```
@@ -69,13 +68,39 @@ written in **dang**; the **Java SDK** (`dagger/java-sdk`) is the fallback for
 modules that need more logic than dang expresses comfortably.
 
 ```sh
-dagger check                                             # run all checks
-dagger call android versions                             # what's in the toolchain
-dagger call focus spike-apk export --path=/tmp/spike.apk # build the platform spike
+dagger check                  # run all checks
+dagger call android versions  # what's in the toolchain
 ```
 
-There is no build for the *real* app yet, because there is no real app code
-yet — only the spike.
+The `android` module builds a JDK 21 + Android SDK 36 + Gradle container and
+exposes `gradle(source, task)`. It has no consumer right now — the spike that
+exercised it is gone and the app has not landed — so the first job when app code
+appears is wiring `focus.apk` back onto it.
+
+## Working with the phone
+
+Installing on the Pixel needs no cable. On the phone: Settings → System →
+Developer options → **Wireless debugging** → on → **Pair device with pairing
+code**.
+
+```sh
+adb pair <ip>:<pairing-port>    # port from inside the pairing dialog
+adb connect <ip>:<connect-port> # port from the main Wireless debugging screen
+```
+
+The two ports differ, and the connect port **rotates** whenever the phone sleeps
+or that screen closes — a dropped connection usually just needs a new
+`adb connect`, not a re-pair. Don't use `adb -d`; that means USB.
+
+The permissions the app needs beyond the normal ones are granted once over adb,
+never at runtime:
+
+```sh
+adb shell pm grant <pkg> android.permission.WRITE_SECURE_SETTINGS
+adb shell pm grant <pkg> android.permission.READ_MEDIA_IMAGES
+adb shell cmd notification allow_listener <pkg>/<pkg>.NotificationListener
+adb shell cmd notification allow_dnd <pkg>
+```
 
 ## Git identity — important
 

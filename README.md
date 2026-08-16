@@ -10,20 +10,18 @@ Built for one phone and one person. Not a product.
 
 ## Status
 
-**Scope settled.** No app code yet — the platform spike is built and waiting to
-be run on the phone. See the [runbook](docs/spike.md).
+**Design done, verified on device.** Every platform mechanism the design relies
+on was proven on a Pixel 6 running Android 17. Next step is building v1.
 
 - **[Design doc + mockups](docs/design/focus-launcher.html)** — open in a
   browser; self-contained HTML.
 - [Decisions](docs/decisions/) — ADRs.
 - [Build tooling](docs/build-tooling.md) — Dagger, pinned to v1.0.0-beta.9.
-- [Spike runbook](docs/spike.md) — the on-device questions still open.
 
 ## Development
 
 ```sh
-dagger check                                             # run all checks
-dagger call focus spike-apk export --path=/tmp/spike.apk # build the platform spike
+dagger check    # run all checks
 ```
 
 See [AGENT.md](AGENT.md) for the full orientation.
