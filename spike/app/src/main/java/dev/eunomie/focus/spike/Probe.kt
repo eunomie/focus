@@ -22,6 +22,7 @@ private val ZEN_RULE_ID: Uri = Uri.parse("dev.eunomie.focus.spike:zen")
 data class ProbeState(
     val currentHomePackage: String,
     val roleHeld: Boolean,
+    val roleAvailable: Boolean,
     val homeComponentEnabled: Boolean,
     val canWriteSecureSettings: Boolean,
     val greyscaleOn: Boolean,
@@ -40,6 +41,7 @@ class Probe(private val context: Context) {
     fun read() = ProbeState(
         currentHomePackage = currentHomePackage(),
         roleHeld = roleManager.isRoleHeld(RoleManager.ROLE_HOME),
+        roleAvailable = roleManager.isRoleAvailable(RoleManager.ROLE_HOME),
         homeComponentEnabled = homeComponentEnabled(),
         canWriteSecureSettings = canWriteSecureSettings(),
         greyscaleOn = greyscaleOn(),
@@ -52,9 +54,6 @@ class Probe(private val context: Context) {
     /** Experiment 1: does requesting ROLE_HOME actually show a one-tap dialog? */
     fun requestHomeRoleIntent(): Intent =
         roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
-
-    fun homeRoleRequestable(): Boolean =
-        roleManager.isRoleAvailable(RoleManager.ROLE_HOME)
 
     /** The documented way back: the system Home-app picker. */
     fun homeSettingsIntent(): Intent = Intent(Settings.ACTION_HOME_SETTINGS)
@@ -127,15 +126,15 @@ class Probe(private val context: Context) {
      * DND should suppress alerting, not posting — the count line in v1 depends on that
      * being true.
      */
-    fun setZenRule(active: Boolean) {
+    fun setZenRule(active: Boolean): String = runCatching {
         val nm = notificationManager
-        if (!nm.isNotificationPolicyAccessGranted) return
+        if (!nm.isNotificationPolicyAccessGranted) return "DND access not granted"
 
         val existing = nm.automaticZenRules.entries.firstOrNull { it.value.conditionId == ZEN_RULE_ID }
         val id = existing?.key ?: nm.addAutomaticZenRule(
             AutomaticZenRule.Builder("Focus Spike", ZEN_RULE_ID)
                 .setZenPolicy(ZenPolicy.Builder().disallowAllSounds().build())
-                .setOwner(ComponentName(context, SpikeNotificationListener::class.java))
+                .setConfigurationActivity(ComponentName(context, MainActivity::class.java))
                 .build(),
         )
         nm.setAutomaticZenRuleState(
@@ -146,7 +145,8 @@ class Probe(private val context: Context) {
                 if (active) Condition.STATE_TRUE else Condition.STATE_FALSE,
             ),
         )
-    }
+        if (active) "zen rule on" else "zen rule off"
+    }.getOrElse { "FAILED: ${it.javaClass.simpleName}: ${it.message}" }
 
     private fun zenRuleActive(): Boolean =
         notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
