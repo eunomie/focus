@@ -1,0 +1,71 @@
+pub description = "Android SDK and Gradle toolchain, containerised"
+
+type Android {
+  """
+  Android API level to install a platform for, and compile against.
+  """
+  pub apiLevel: String! = "36"
+
+  """
+  Build tools revision to install.
+  """
+  pub buildTools: String! = "36.0.0"
+
+  """
+  Gradle version installed into the toolchain container.
+  """
+  pub gradleVersion: String! = "8.14.3"
+
+  let cmdlineTools: File! {
+    http("https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip")
+  }
+
+  let gradleDist: File! {
+    http("https://services.gradle.org/distributions/gradle-" + gradleVersion + "-bin.zip")
+  }
+
+  """
+  A JDK with the Android SDK, the requested platform and build tools, and
+  Gradle on PATH. Licences are accepted here so the result caches as one layer.
+  """
+  pub toolchain: Container! {
+    container
+      .from("eclipse-temurin:21-jdk")
+      .withExec(["sh", "-c", "apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*"])
+      .withEnvVariable("ANDROID_HOME", "/opt/android-sdk")
+      .withMountedFile("/tmp/cmdline-tools.zip", cmdlineTools)
+      .withMountedFile("/tmp/gradle.zip", gradleDist)
+      .withExec(["sh", "-c", "mkdir -p $ANDROID_HOME/cmdline-tools && unzip -q /tmp/cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools && mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest"])
+      .withExec(["sh", "-c", "unzip -q /tmp/gradle.zip -d /opt && mv /opt/gradle-" + gradleVersion + " /opt/gradle"])
+      .withEnvVariable("PATH", "$ANDROID_HOME/cmdline-tools/latest/bin:/opt/gradle/bin:$PATH", expand: true)
+      .withExec(["sh", "-c", "yes | sdkmanager --licenses > /dev/null 2>&1 || true"])
+      .withExec(["sdkmanager", "platform-tools", "platforms;android-" + apiLevel, "build-tools;" + buildTools])
+  }
+
+  """
+  Versions of everything in the toolchain. Cheap way to confirm it built.
+  """
+  pub versions: String! {
+    toolchain
+      .withExec(["sh", "-c", "java -version 2>&1 | head -1; gradle --version | grep -E '^Gradle'; sdkmanager --version | tail -1"])
+      .stdout
+  }
+
+  """
+  A container with Gradle caches mounted and `source` at /work.
+  """
+  pub workspace(source: Directory!): Container! {
+    toolchain
+      .withMountedCache("/root/.gradle", cacheVolume("gradle-home"))
+      .withDirectory("/work", source)
+      .withWorkdir("/work")
+  }
+
+  """
+  Run a Gradle task against `source`, returning the finished container.
+  """
+  pub gradle(source: Directory!, task: String!): Container! {
+    workspace(source)
+      .withExec(["gradle", "--no-daemon", "--console=plain", task])
+  }
+}

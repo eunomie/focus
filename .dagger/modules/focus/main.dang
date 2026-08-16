@@ -38,4 +38,17 @@ type Focus {
       .withExec(["find", ".", "-maxdepth", "2", "-not", "-path", "./.git/*"])
       .stdout
   }
+
+  """
+  The throwaway platform spike, as a debug APK to sideload onto the Pixel.
+
+  Not the real app -- it answers the open platform questions (can the HOME role
+  be taken and handed back, does greyscale behave, does a listener still see
+  notifications under DND) before any real UI is written.
+  """
+  pub spikeApk: File! {
+    android
+      .gradle(source: source.directory("spike"), task: ":app:assembleDebug")
+      .file("/work/app/build/outputs/apk/debug/app-debug.apk")
+  }
 }
