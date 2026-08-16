@@ -12,7 +12,7 @@ android {
         applicationId = "dev.eunomie.focus.spike"
         minSdk = 33
         targetSdk = 36
-        versionCode = 3
+        versionCode = 7
         versionName = "0.1-spike"
     }
 

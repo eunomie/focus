@@ -55,6 +55,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun ProbeScreen(probe: Probe) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val wallpaper = remember { Wallpaper(context) }
+    var hasBackup by remember { mutableStateOf(wallpaper.hasBackup) }
     var state by remember { mutableStateOf(probe.read()) }
     var last by remember { mutableStateOf("—") }
 
@@ -221,6 +224,31 @@ private fun ProbeScreen(probe: Probe) {
             enabled = state.dndAccessGranted && state.zenRuleActive,
             note = zenNote(state.dndAccessGranted, state.zenRuleActive, wantOn = false),
         ) { last = probe.setZenRule(false) }
+
+        Section("5 · wallpaper, and the swipe-up flicker")
+        Text(
+            "Back up first — the app cannot change the wallpaper until it can put it back. " +
+                "Then apply, and swipe up to home from an app: if the flicker is gone, ADR 6's " +
+                "claim holds.",
+            fontSize = 12.sp,
+            color = NEUTRAL,
+        )
+        Row("wallpaper backup", if (hasBackup) "saved" else "NONE", if (hasBackup) GOOD else WARN)
+        Act("Back up current wallpaper") {
+            last = wallpaper.backupCurrent(); hasBackup = wallpaper.hasBackup
+        }
+        Act(
+            "Apply focus wallpaper (home + lock)",
+            enabled = hasBackup,
+            note = if (!hasBackup) "Back up first — otherwise your wallpaper cannot be restored." else null,
+        ) {
+            last = wallpaper.applyFocus(listOf("Phone", "Messages", "Camera", "Maps", "Podcasts"))
+        }
+        Act(
+            "Restore your wallpaper",
+            enabled = hasBackup,
+            note = if (!hasBackup) "Nothing backed up." else null,
+        ) { last = wallpaper.restore() }
     }
 }
 

@@ -3,6 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
+    <!-- WallpaperManager.getWallpaperFile() checks this even on modern targets. Declared
+         so the spike can test whether a one-time adb grant unlocks reading the current
+         wallpaper back; nothing requests it at runtime. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <!-- Granted once over adb, never at runtime:
          adb -d shell pm grant dev.eunomie.focus.spike android.permission.WRITE_SECURE_SETTINGS -->
