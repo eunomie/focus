@@ -24,19 +24,22 @@ in a browser, it is a self-contained HTML doc with mockups and diagrams.
 open questions answered — see [ADR 5](docs/decisions/0005-v1-scope.md) for the
 answers, which are the authoritative statement of what v1 is.
 
-The agreed next step is the **platform spike** described at the end of the
-design doc: prove `ROLE_HOME` can be taken and handed back, measure the
-gesture-navigation tax, confirm greyscale and the notification listener behave.
-It is throwaway code that answers the only questions that could still change the
-architecture. Don't start the real app before it.
+The **platform spike** is written and builds to an APK, but has not been run on
+the phone yet — that needs a physical Pixel 6, so it is Yves's step, not an
+agent's. It answers the only questions that could still change the architecture:
+whether `ROLE_HOME` can be taken and handed back, how much the
+gesture-navigation tax hurts, and whether greyscale and the notification
+listener behave. **Don't start the real app before those answers exist**, and
+record them in ADR 4 when they do. Runbook: [`docs/spike.md`](docs/spike.md).
 
 What exists today:
 
-- The design doc + mockups (`docs/`).
-- A minimal, working Dagger toolchain skeleton (`dagger.toml`,
-  `.dagger/modules/focus/`) that proves the build mechanism runs. It is
-  deliberately a skeleton — see [`docs/build-tooling.md`](docs/build-tooling.md)
-  for the shape it is expected to grow into.
+- The design doc + mockups (`docs/`), and the settled scope in ADR 5.
+- A working Dagger toolchain: `.dagger/modules/android/` (Android SDK + Gradle
+  in a container) and `.dagger/modules/focus/`. See
+  [`docs/build-tooling.md`](docs/build-tooling.md).
+- `spike/` — the throwaway platform probe. Builds to an installable APK.
+  Runbook: [`docs/spike.md`](docs/spike.md).
 
 ## Repo layout
 
@@ -44,10 +47,13 @@ What exists today:
 AGENT.md                   this file
 CLAUDE.md                  pointer to this file + the non-negotiables
 dagger.toml                Dagger workspace: dang SDK + local modules
-.dagger/modules/focus/     the repo's Dagger module (dang)
+.dagger/modules/android/   Android SDK + Gradle toolchain (dang)
+.dagger/modules/focus/     the repo's own Dagger module (dang)
+spike/                     throwaway platform probe (delete after the spike)
 docs/
   README.md                doc conventions
   build-tooling.md         Dagger toolchain: what exists, what's planned
+  spike.md                 platform spike runbook
   design/                  design docs (HTML, self-contained, with mockups)
   decisions/               ADRs — short records of decisions and their why
 ```
@@ -63,11 +69,13 @@ written in **dang**; the **Java SDK** (`dagger/java-sdk`) is the fallback for
 modules that need more logic than dang expresses comfortably.
 
 ```sh
-dagger check              # run all checks
-dagger call focus tree    # smoke test: the repo as the module sees it
+dagger check                                             # run all checks
+dagger call android versions                             # what's in the toolchain
+dagger call focus spike-apk export --path=/tmp/spike.apk # build the platform spike
 ```
 
-There is no Gradle/Android build yet because there is no app code yet.
+There is no build for the *real* app yet, because there is no real app code
+yet — only the spike.
 
 ## Git identity — important
 
