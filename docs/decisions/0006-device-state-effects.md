@@ -43,9 +43,9 @@ Moved from the v2 "allowed contacts" nice-to-have into **v1 core**.
 | Always-on display | `Settings.Secure.doze_always_on` | `WRITE_SECURE_SETTINGS` (adb) |
 | No lock-screen notifications | `Settings.Secure.lock_screen_show_notifications` | `WRITE_SECURE_SETTINGS` (adb) |
 | Lock + home wallpaper | `WallpaperManager.setBitmap(…, FLAG_LOCK / FLAG_SYSTEM)` | `SET_WALLPAPER` (normal) |
+| Reading it back to restore | `WallpaperManager.getWallpaperFile(FLAG_SYSTEM)` | `READ_MEDIA_IMAGES` (adb) |
 
-All four verified writable on the target device except the wallpaper, which uses
-a documented, permissionless-in-practice API.
+Every row verified on the target device, Pixel 6 / Android 17.
 
 **Not attempted: replacing the lock screen with our own UI.** Android has no API
 for it. Apps that appear to do this draw an activity over the keyguard with
@@ -66,6 +66,10 @@ focus screen draws (see [ADR 4](0004-focus-holds-the-home-role-while-active.md))
 Setting the **home** wallpaper as well as the lock one removes it: what the
 transition reveals already looks like the focus screen.
 
+**Verified on device.** With the focus wallpaper applied, the flicker is gone.
+This was the last claim in the design resting on reasoning rather than
+measurement.
+
 Taken to its conclusion, the home activity's window draws over the wallpaper and
 renders only the live parts — clock and exit control — while the static app list
 *is* the wallpaper. The launcher and the wallpaper become the same pixels, so
@@ -80,18 +84,41 @@ burning battery, notifications hidden from the lock screen, and the wrong
 wallpaper. Restoration becomes a real component: persisted intended state,
 reconciled on app start and on `BOOT_COMPLETED`, not a line in an `onDestroy`.
 
-**Never read the system wallpaper.** Restoring the user's original would mean
-reading it, and `getWallpaperFile(FLAG_LOCK)` needs `READ_WALLPAPER_INTERNAL` —
-signature-level, so unlike `WRITE_SECURE_SETTINGS` it cannot be granted over
-`adb`. Fairphone hit this exact wall; their manifest carries the permission as
-protected plus a note that Google rejected a Play update over
-`MANAGE_EXTERNAL_STORAGE`. Instead the user picks their normal wallpapers once
-during setup, the app keeps its own copies, and restores those. No extra
-permission at all.
+**The wallpaper can be read back, so the app restores the real one.** An earlier
+draft of this ADR claimed the blocker was `READ_WALLPAPER_INTERNAL` — signature
+level, therefore impossible — and designed around it with a setup step where the
+user nominates a "normal" wallpaper for the app to hoard a copy of. That was
+wrong, and the spike found it.
 
-**Everything here degrades cleanly.** Without the `adb` grant, greyscale,
-always-on and lock-screen notifications simply do nothing; the wallpaper and the
-contact breakthrough still work. Nothing core depends on a privileged grant.
+The actual gate on Android 17 is `READ_MEDIA_IMAGES`, a *runtime* permission.
+`READ_EXTERNAL_STORAGE` is what `WallpaperManager` historically checked and is
+still worth declaring, but on API 33+ it is superseded and ignored. Both grant
+cleanly over `adb`, which is a channel the app already uses:
+
+```sh
+adb shell pm grant <pkg> android.permission.READ_MEDIA_IMAGES
+```
+
+Verified on device: `getWallpaperFile(FLAG_SYSTEM)` returns the live wallpaper
+once granted.
+
+So there is no setup step and no nominated wallpaper. Focus mode backs up
+whatever is actually set, paints its own, and puts the original back — which
+also means it cannot go stale when the wallpaper changes.
+
+**The rule that falls out: never change what cannot be put back.** The wallpaper
+effect is gated on a successful backup. If the grant is missing, focus mode
+leaves the wallpaper alone entirely rather than replacing it with something it
+cannot undo. The spike enforced exactly this and it is the right behaviour for
+the real app — a destructive action is only offered once its inverse is proven
+to work.
+
+**Everything here degrades cleanly.** Without the `adb` grants, greyscale,
+always-on, lock-screen notifications *and* the wallpaper all simply do nothing —
+the wallpaper because of the rule above, not because it is impossible. The
+starred-contact breakthrough and the focus launcher itself need no grant at all,
+so the core of the app works on a plain install and the device-state effects are
+a strict enhancement.
 
 **The always-on display is drawn by SystemUI**, so it shows the system clock and
 notification icons on black — never the wallpaper. Focus mode gets a clock on

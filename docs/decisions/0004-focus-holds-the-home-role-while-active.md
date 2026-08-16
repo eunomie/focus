@@ -76,10 +76,10 @@ Accepted costs, now measured rather than guessed:
   launcher's wallpaper before the focus screen draws. Quickstep coordinates that
   animation with Pixel Launcher and will not do so for a third-party home app.
   Judged "not a big deal" in practice.
-- That artefact is fixable without fighting the platform, and the fix is already
-  in scope for other reasons: focus mode sets the **home** wallpaper as well as
-  the lock wallpaper, so what the transition reveals already looks like the
-  focus screen. See [ADR 6](0006-device-state-effects.md).
+- That artefact is **fixed, and verified on device**: focus mode sets the
+  **home** wallpaper as well as the lock wallpaper, so what the transition
+  reveals already looks like the focus screen. See
+  [ADR 6](0006-device-state-effects.md).
 - No privileged permissions, no root, no custom ROM.
 
 The target device runs Android 17, so these results describe the current

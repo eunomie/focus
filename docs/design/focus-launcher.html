@@ -812,6 +812,7 @@
     <code>QUERY_ALL_PACKAGES</code>, which Fairphone declares, is not required for this.</td></tr>
     <tr><td><code>BIND_NOTIFICATION_LISTENER_SERVICE</code></td><td>The "3 waiting" count (Q4). User grants Notification Access once in Settings. DND suppresses <em>alerting</em>, not <em>posting</em>, so the listener still sees what arrives while focus is on.</td></tr>
     <tr><td><code>SET_WALLPAPER</code></td><td>Lock and home wallpaper during focus mode. A normal permission — no prompt, no grant.</td></tr>
+    <tr><td><code>READ_MEDIA_IMAGES</code></td><td>Reading the current wallpaper so the original can be restored. Granted once over <code>adb</code>, same as <code>WRITE_SECURE_SETTINGS</code>. Without it, focus mode leaves the wallpaper alone rather than changing something it can't undo.</td></tr>
     <tr><td><code>WRITE_SECURE_SETTINGS</code></td><td>Greyscale, always-on display, and hiding lock-screen notifications. Granted once over <code>adb</code>, never requested at runtime:<br>
     <code>adb -d shell pm grant &lt;pkg&gt; android.permission.WRITE_SECURE_SETTINGS</code><br>
     Then <code>Settings.Secure</code>: <code>accessibility_display_daltonizer{,_enabled}</code>,
