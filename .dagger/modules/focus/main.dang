@@ -39,4 +39,12 @@ type Focus {
       .stdout
   }
 
+  """
+  The app, as a debug APK to sideload onto the Pixel.
+  """
+  pub apk: File! {
+    android
+      .gradle(source: source, task: ":app:assembleDebug")
+      .file("/work/app/build/outputs/apk/debug/app-debug.apk")
+  }
 }
