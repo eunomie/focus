@@ -16,6 +16,14 @@ adb install -r /tmp/focus-spike.apk
 adb shell pm grant dev.eunomie.focus.spike android.permission.WRITE_SECURE_SETTINGS
 ```
 
+Every other permission can also be granted from `adb`, so none of the setup
+needs the phone's UI:
+
+```sh
+adb shell cmd notification allow_listener dev.eunomie.focus.spike/dev.eunomie.focus.spike.SpikeNotificationListener
+adb shell cmd notification allow_dnd dev.eunomie.focus.spike
+```
+
 The `adb` grant is what makes greyscale testable; without it the app still runs
 and the greyscale buttons simply do nothing (the probe screen shows
 `WRITE_SECURE_SETTINGS: NOT granted`). Sideloading the APK from a file manager
@@ -63,13 +71,12 @@ adb uninstall dev.eunomie.focus.spike
 Worth having wireless debugging connected *before* starting experiment 3, so the
 rescue path is already open if the phone goes grey.
 
-Then open **Focus Spike** and grant notification access and DND access from the
-buttons in section 4.
-
-## The four experiments
+## The experiments
 
 Each maps to a section on the probe screen. The `state` block at the top updates
-once a second, so the answer to most of these is "watch that block".
+once a second, so the answer to most of these is "watch that block". Buttons grey
+themselves out when they cannot do anything useful yet, and print the reason
+underneath — so the order to press things in should be self-evident.
 
 ### 1 — Can the HOME role be taken in one tap?
 
@@ -83,6 +90,19 @@ way back, and the fallback if experiment 2 fails.
 > appeared at all.
 
 ### 2 — Does the role fall back on its own? *(the interesting one)*
+
+Two things that look like bugs and are not:
+
+- **Disabling the HOME component while you are looking at the spike's home
+  screen makes that screen vanish.** That is the component being switched off,
+  not a crash. Check `adb logcat -b crash -d` if in doubt — it stays empty.
+- **While the component is disabled, "Request ROLE_HOME" is refused.** The role
+  requires an activity with MAIN + HOME as a `<required-components>`, and a
+  disabled one doesn't count, so the app no longer qualifies. Re-enable first,
+  then request. The probe now greys the button out and says so.
+
+Re-enabling restores *candidacy* only — it deliberately does not retake the
+role.
 
 With the role held, tap **Disable HOME component**, then watch the `home app`
 line **without touching Settings**.
@@ -135,6 +155,27 @@ proposed stand-in for Fairphone's hardware switch.
 
 > **Record:** whether Quick Tap works, and whether the gesture tax is a
 > non-issue, an irritation, or a dealbreaker.
+
+## Results so far
+
+Provisional — moves into ADR 4 when the spike is finished.
+
+| Experiment | Result on Pixel 6 / Android 17 |
+|---|---|
+| 1 · request `ROLE_HOME` | **Works.** One system dialog, one tap, role granted. |
+| 1 · `ACTION_HOME_SETTINGS` | **Works.** The manual path is fine as a fallback. |
+| 2 · component disable → fallback | **Works.** Role returns to Pixel Launcher with no user interaction. |
+| 3 · greyscale | **Works** via the daltonizer keys, after the one-time `adb` grant. |
+| 4 · notifications under DND | **Works.** The listener count still increments while the zen rule is active. |
+| 5 · Quick Tap | **Works.** Visible in logcat as `Columbus/Service` launching the app. |
+| 5 · gesture-navigation tax | Still open — needs a few hours of ordinary use. |
+
+The one that mattered most is experiment 2: exiting focus mode can be
+**automatic**, not a trip through Settings.
+
+Note the device is on **Android 17 (SDK 37)**, newer than the design assumed,
+so these answers are for the current platform rather than one about to be
+superseded.
 
 ## After
 
