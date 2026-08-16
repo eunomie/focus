@@ -17,9 +17,10 @@ git config user.email "yves.brissaud@gmail.com"
 Local to this repo only, never `--global`. `Signed-off-by:` trailers use the
 same personal address.
 
-**No app code yet.** The project is in design review. `docs/design/` holds the
-plan under review; writing the Android app before that review lands defeats the
-point of the review.
+**No app code yet.** The design is reviewed and the scope is settled — see
+[ADR 5](docs/decisions/0005-v1-scope.md). What comes next is a throwaway
+platform spike, not the app; the spike exists to answer the questions that could
+still change the architecture, so building the real thing first wastes it.
 
 **No AI attribution.** Not in commits, patches, PR titles or bodies. No
 `Co-Authored-By` lines for agents.

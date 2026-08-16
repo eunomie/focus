@@ -10,7 +10,7 @@ Built for one phone and one person. Not a product.
 
 ## Status
 
-**Design review.** There is no app code yet, deliberately.
+**Scope settled**, no app code yet. Next step is a throwaway platform spike.
 
 - **[Design doc + mockups](docs/design/focus-launcher.html)** — open in a
   browser; self-contained HTML.

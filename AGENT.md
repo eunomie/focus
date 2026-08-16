@@ -20,9 +20,15 @@ in a browser, it is a self-contained HTML doc with mockups and diagrams.
 
 ## Status
 
-**Design phase. There is no app code yet, on purpose.** The feature plan is
-awaiting review. Do not start writing the Android app until that review has
-happened.
+**Scope settled, no app code yet.** The design has been reviewed and all eight
+open questions answered — see [ADR 5](docs/decisions/0005-v1-scope.md) for the
+answers, which are the authoritative statement of what v1 is.
+
+The agreed next step is the **platform spike** described at the end of the
+design doc: prove `ROLE_HOME` can be taken and handed back, measure the
+gesture-navigation tax, confirm greyscale and the notification listener behave.
+It is throwaway code that answers the only questions that could still change the
+architecture. Don't start the real app before it.
 
 What exists today:
 

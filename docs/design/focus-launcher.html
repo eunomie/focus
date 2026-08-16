@@ -197,7 +197,7 @@
   <p class="sub">A focus-oriented launcher for a Pixel 6. One button swaps the phone
   to a quieter home screen — a few apps, no notifications — and one gesture brings the
   normal launcher back.</p>
-  <p class="meta">eunomie/focus · 16 August 2026 · status: awaiting Yves's call on the open questions</p>
+  <p class="meta">eunomie/focus · 16 August 2026 · status: scope settled — all open questions answered, ready to build</p>
 </header>
 
 <nav class="toc">
@@ -211,7 +211,7 @@
     <li><a href="#borrow">What I take, what I don't</a></li>
     <li><a href="#tech">Technical direction</a></li>
     <li><a href="#build">Build tooling</a></li>
-    <li><a href="#questions">Open questions</a></li>
+    <li><a href="#questions">Decisions</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
   </ol>
 </nav>
@@ -662,15 +662,15 @@
     <tr><td><b>Enter / exit</b></td><td>Quick Settings tile + Quick Tap + home shortcut in; hold-to-exit out. The locked-in requirement.</td></tr>
     <tr><td><b>HOME role handling</b></td><td>Take on entry, release on exit — plus the fallback spike from <a href="#constraint">§03</a>.</td></tr>
     <tr><td><b>Do Not Disturb</b></td><td>One <code>AutomaticZenRule</code> tied to focus state. Following Fairphone's shipped choice, not their abandoned one.</td></tr>
-    <tr><td><b>Allowed-app configuration</b></td><td>One screen, one list, one cap.</td></tr>
+    <tr><td><b>Allowed-app configuration</b></td><td>One screen, one list, a cap of 5.</td></tr>
     <tr><td><b>Transition confirmation</b></td><td>The blurred overlay. Cheap, and it removes all ambiguity about which mode you're in.</td></tr>
+    <tr><td><b>Notification count line</b> <span class="pill core">Q4</span></td><td>"3 waiting" — a count only, no senders, no previews, not tappable. Counts allowed apps only. Needs <code>NotificationListenerService</code>.</td></tr>
+    <tr><td><b>Device-wide greyscale</b> <span class="pill core">Q5</span></td><td>On entering focus, off on leaving. One-time <code>adb</code> grant; degrades cleanly to colour without it. See the restore-safety note below.</td></tr>
   </table>
 
   <h3>Nice to have — v2, only if v1 gets used</h3>
   <table>
-    <tr><td class="c"><span class="pill later">later</span></td><td><b>Notification count line</b> — "3 waiting", no senders, no previews. Needs <code>NotificationListenerService</code>.</td></tr>
     <tr><td class="c"><span class="pill later">later</span></td><td><b>Session timer</b> — focus for 25/50 minutes, then auto-exit. Additive, not a lockout.</td></tr>
-    <tr><td class="c"><span class="pill later">later</span></td><td><b>Device-wide greyscale</b> — the single highest-impact effect. Needs the one-time <code>adb</code> grant.</td></tr>
     <tr><td class="c"><span class="pill later">later</span></td><td><b>A second profile</b> — only once one profile has proved itself. Fairphone ships six; one person needs one.</td></tr>
     <tr><td class="c"><span class="pill later">later</span></td><td><b>Allowed contacts</b> — let specific people through DND. Cheap via <code>ZenPolicy</code>, but only matters if the blanket rule turns out to be too blunt.</td></tr>
   </table>
@@ -777,9 +777,22 @@
     <tr><td><code>android.app.role.HOME</code></td><td>The role itself. One system dialog per entry, or once if the spike works out.</td></tr>
     <tr><td><i>(none needed)</i></td><td>Listing installed apps uses <code>LauncherApps.getActivityList()</code>, which needs no permission —
     <code>QUERY_ALL_PACKAGES</code>, which Fairphone declares, is not required for this.</td></tr>
-    <tr><td><code>BIND_NOTIFICATION_LISTENER_SERVICE</code></td><td>v2 only, for the "3 waiting" line. Skippable; the app works without it.</td></tr>
-    <tr><td><code>WRITE_SECURE_SETTINGS</code> <span class="pill">opt-in</span></td><td>v2 only, for greyscale. Granted once over <code>adb</code>, never requested at runtime.</td></tr>
+    <tr><td><code>BIND_NOTIFICATION_LISTENER_SERVICE</code></td><td>The "3 waiting" count (Q4). User grants Notification Access once in Settings. DND suppresses <em>alerting</em>, not <em>posting</em>, so the listener still sees what arrives while focus is on.</td></tr>
+    <tr><td><code>WRITE_SECURE_SETTINGS</code></td><td>Greyscale (Q5). Granted once over <code>adb</code>, never requested at runtime:<br>
+    <code>adb -d shell pm grant &lt;pkg&gt; android.permission.WRITE_SECURE_SETTINGS</code><br>
+    Then <code>Settings.Secure</code>: <code>accessibility_display_daltonizer_enabled</code> = 1/0 and
+    <code>accessibility_display_daltonizer</code> = 0 (monochromacy) / −1.</td></tr>
   </table>
+
+  <div class="callout bad">
+    <span class="tag">Failure mode worth designing for</span>
+    <p>Greyscale is <strong>global device state, not app state</strong>. If Focus is killed, crashes, or
+    is force-stopped mid-session, the phone stays grey with no obvious way back — a genuinely
+    annoying way to lose an afternoon.</p>
+    <p>So the rule is: greyscale is restored on <em>every</em> path out, not just the happy one. On
+    app start and on <code>BOOT_COMPLETED</code>, if persisted state says focus is off but the
+    daltonizer is on, turn it off. Cheap to build, and it turns a sharp edge into a non-event.</p>
+  </div>
 
   <div class="callout warn">
     <span class="tag">Known tax</span>
@@ -852,33 +865,41 @@
 
 <!-- ============================================ -->
 <section id="questions">
-  <h2>10 — Open questions</h2>
-  <p class="lede">Each has a recommendation. None of them are mine to decide — they're taste, and it's your phone.</p>
+  <h2>10 — Decisions</h2>
+  <p class="lede">All eight answered on 16 August. Six went with the recommendation; two expanded v1.</p>
+
+  <div class="callout">
+    <span class="tag">Net effect on scope</span>
+    <p>Q4 and Q5 pulled the notification count line and device-wide greyscale out of "maybe later"
+    and into v1. Everything else confirmed the recommendation, which means the shape of the app
+    doesn't change — it just gets two more things in the first release.</p>
+  </div>
 
   <div class="qa">
     <div class="q"><span class="n">Q1</span><span>Which apps, and how many?</span></div>
     <p>Fairphone caps at five and it feels right — enough for a phone to still be a phone, few
     enough that the list never needs scrolling or scanning.</p>
-    <div class="rec"><b>Recommendation</b>Cap at 5. Starting list: Phone, Messages, Camera, Maps,
-    Podcasts. The cap matters more than the contents — if it's adjustable it will drift upward.</div>
+    <div class="rec"><b>Decided — 5 apps</b>Cap at 5. Starting list: Phone, Messages, Camera, Maps,
+    Podcasts, editable in the settings screen. The cap itself is not editable — that's the point of it.</div>
   </div>
 
   <div class="qa">
     <div class="q"><span class="n">Q2</span><span>Is there an escape hatch to <em>all</em> apps from inside focus mode?</span></div>
     <p>The honest tension: a personal phone occasionally needs the banking app right now. But every
     minimal launcher that adds a full app list ends up being used as a normal launcher.</p>
-    <div class="rec"><b>Recommendation</b>No app drawer. If you need something else, exit focus — that
-    is what the hold-to-exit is for, and it's about two seconds. Keeps exactly one way out instead
-    of two.</div>
+    <div class="rec"><b>Decided — no drawer</b>In Yves's words: <em>"if I need an app I'm not in focus
+    mode anymore."</em> That's the cleanest possible statement of the rule, and it settles a lot of
+    smaller questions downstream — there is exactly one way out, and needing an app is a reason to
+    take it.</div>
   </div>
 
   <div class="qa">
     <div class="q"><span class="n">Q3</span><span>Should there be a schedule or automatic trigger?</span></div>
     <p>Fairphone has none — it's the physical switch or nothing. Minimalist Phone has blocking
     schedules, and they're part of what makes it feel like a warden.</p>
-    <div class="rec"><b>Recommendation</b>Not in v1. Manual only. A phone that enters focus mode on
-    its own is a phone that surprises you in a meeting. A voluntary "focus for 25 minutes, then
-    exit" timer is the v2 version of this and keeps the initiative with you.</div>
+    <div class="rec"><b>Decided — manual only</b>No schedules, no automatic triggers, in v1 or later.
+    The voluntary "focus for 25 minutes then exit" timer stays on the v2 list, since it keeps the
+    initiative with you rather than taking it away.</div>
   </div>
 
   <div class="qa">
@@ -886,9 +907,11 @@
     <p>Three levels: <b>(a)</b> DND only — nothing gets through, nothing is shown; <b>(b)</b> DND plus a
     count line, "3 waiting", no senders or previews; <b>(c)</b> a filtered list rendered in the launcher,
     which needs <code>NotificationListenerService</code> and is where Fairphone's own attempt stalled.</p>
-    <div class="rec"><b>Recommendation</b>Ship (a). Add (b) if the silence turns out to be more
-    anxiety-inducing than the noise — that's genuinely hard to predict without living with it. Skip
-    (c); it rebuilds the notification shade inside the thing meant to escape it.</div>
+    <div class="rec"><b>Decided — (b), and it's in v1</b>DND plus a bare count. Two details I've
+    settled rather than send back: it counts <strong>only allowed apps</strong> (a count that includes
+    Slack is noise, and by definition you don't care about the rest), and the line is
+    <strong>not tappable</strong> — the moment it expands, it's the notification shade again. Both are
+    one-line changes if living with it says otherwise. (c) stays rejected.</div>
   </div>
 
   <div class="qa">
@@ -896,34 +919,36 @@
     <p>Probably the single highest-impact effect per line of code — colour is most of what makes app
     icons pull at you. Needs a one-time <code>adb shell pm grant … WRITE_SECURE_SETTINGS</code>,
     which is available precisely because this is sideloaded onto your own device.</p>
-    <div class="rec"><b>Recommendation</b>Yes, as an opt-in v2 unlock. One <code>adb</code> command at
-    install time, and the app degrades cleanly to colour if the grant is missing.</div>
+    <div class="rec"><b>Decided — yes, in v1</b>One <code>adb</code> command at install time; the app
+    degrades cleanly to colour if the grant is missing, so it never becomes a hard dependency. The
+    keys are confirmed working in shipped apps — see <a href="#tech">§08</a>, along with the
+    restore-on-crash safety net this makes necessary.</div>
   </div>
 
   <div class="qa">
     <div class="q"><span class="n">Q6</span><span>How much friction on the way out?</span></div>
     <p>Options: instant tap, hold ~1s, or a confirmation dialog. Fairphone's physical switch is
     instant and unmissable; a tap on a touchscreen is neither.</p>
-    <div class="rec"><b>Recommendation</b>Hold ~1s with a filling progress bar. Long enough to be a
-    decision, short enough never to be an obstacle. Explicitly no lockout, ever.</div>
+    <div class="rec"><b>Decided — hold ~1s</b>With the filling progress bar, as mocked up in screen 05.
+    Explicitly no lockout, ever.</div>
   </div>
 
   <div class="qa">
     <div class="q"><span class="n">Q7</span><span>One focus mode, or several?</span></div>
     <p>Fairphone ships five presets and allows six saved. That is a product serving strangers who
     don't know what they want yet.</p>
-    <div class="rec"><b>Recommendation</b>Exactly one in v1. Multiple modes is the most tempting
-    feature here and the most likely to be built and never used — it's cheap to add in v2 once
-    there's evidence a second one is wanted.</div>
+    <div class="rec"><b>Decided — one</b>A single focus mode. Storage still keys settings under a
+    profile id so a second one is an additive change later, but nothing in the UI hints that modes
+    exist.</div>
   </div>
 
   <div class="qa">
     <div class="q"><span class="n">Q8</span><span>Is losing Pixel Launcher's gesture polish acceptable?</span></div>
     <p>Unavoidable for any third-party launcher, and only while focus mode is active — but it's the
     kind of thing that's fine in theory and irritating in practice.</p>
-    <div class="rec"><b>Recommendation</b>Accept it provisionally and measure it in the first spike,
-    before any real UI is written. If it turns out to grate, that's an argument for keeping focus
-    sessions short and deliberate rather than for changing the architecture.</div>
+    <div class="rec"><b>Decided — accept, and try it</b>Measured in the first spike, before any real UI
+    is written. If it grates, the answer is shorter and more deliberate focus sessions, not a
+    different architecture.</div>
   </div>
 </section>
 
@@ -941,6 +966,8 @@
         <li>Test whether disabling the HOME component hands the role back automatically</li>
         <li>Feel the gesture-navigation tax (Q8)</li>
         <li>Bind Quick Tap, check it works</li>
+        <li>Confirm the greyscale keys on this Pixel, and that restore-on-crash works</li>
+        <li>Confirm a listener still sees notifications while DND is active</li>
       </ul>
       <p style="font-size:13px;color:var(--dim);margin:12px 0 0">Answers the only questions that could
       change the architecture. Throwaway code.</p>
@@ -953,8 +980,10 @@
         <li>QS tile · Quick Tap · shortcut</li>
         <li>Role handoff both ways</li>
         <li>DND zen rule</li>
-        <li>Allowed-apps screen</li>
+        <li>Allowed-apps screen (cap 5)</li>
         <li>Transition overlay</li>
+        <li>Notification count line</li>
+        <li>Greyscale + restore safety net</li>
       </ul>
       <p style="font-size:13px;color:var(--dim);margin:12px 0 0">Then use it for a month before
       writing another line.</p>
@@ -963,14 +992,13 @@
       <div class="eyebrow" style="margin-bottom:12px">v2 · only what's missed</div>
       <p style="font-size:14.5px;margin-bottom:10px"><strong>Driven by use, not by plan.</strong></p>
       <ul style="font-size:13.5px;padding-left:18px">
-        <li>Notification count line</li>
         <li>Session timer</li>
-        <li>Greyscale</li>
         <li>A second profile</li>
         <li>Allowed contacts</li>
       </ul>
       <p style="font-size:13px;color:var(--dim);margin:12px 0 0">Every item here is a guess until v1
-      has been lived with. Ordering to be decided then.</p>
+      has been lived with. Ordering to be decided then — and "none of them" is a perfectly good
+      outcome.</p>
     </div>
   </div>
 
