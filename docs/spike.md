@@ -158,7 +158,9 @@ proposed stand-in for Fairphone's hardware switch.
 
 ## Results so far
 
-Provisional — moves into ADR 4 when the spike is finished.
+Complete. Recorded in
+[ADR 4](decisions/0004-focus-holds-the-home-role-while-active.md); this table is
+the working copy.
 
 | Experiment | Result on Pixel 6 / Android 17 |
 |---|---|
@@ -168,10 +170,18 @@ Provisional — moves into ADR 4 when the spike is finished.
 | 3 · greyscale | **Works** via the daltonizer keys, after the one-time `adb` grant. |
 | 4 · notifications under DND | **Works.** The listener count still increments while the zen rule is active. |
 | 5 · Quick Tap | **Works.** Visible in logcat as `Columbus/Service` launching the app. |
-| 5 · gesture-navigation tax | Still open — needs a few hours of ordinary use. |
+| 5 · gesture-navigation tax | **Tolerable.** One visible artefact: swiping up to home briefly reveals the previous launcher's wallpaper before the focus screen draws. Judged "not a big deal". |
 
 The one that mattered most is experiment 2: exiting focus mode can be
 **automatic**, not a trip through Settings.
+
+The wallpaper flicker has a fix that costs nothing extra, because focus mode is
+already going to set the wallpaper for the lock screen — see
+[ADR 6](decisions/0006-device-state-effects.md).
+
+Also verified from `adb` on the same device, for the lock-screen work:
+`doze_always_on` and `lock_screen_show_notifications` are both writable with the
+`WRITE_SECURE_SETTINGS` grant.
 
 Note the device is on **Android 17 (SDK 37)**, newer than the design assumed,
 so these answers are for the current platform rather than one about to be
