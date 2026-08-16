@@ -1,0 +1,41 @@
+pub description = "Build and check tooling for the focus launcher"
+
+type Focus {
+  """
+  The repository, taken from the workspace at `sourcePath` in the constructor.
+  """
+  pub source: Directory!
+
+  new(ws: Workspace!, sourcePath: String! = "/") {
+    self.source = ws.directory(sourcePath)
+    self
+  }
+
+  let base: Container! {
+    container.from("alpine:3.22")
+  }
+
+  let workContainer: Container! {
+    base
+      .withDirectory("/work", source)
+      .withWorkdir("/work")
+  }
+
+  """
+  Smoke test proving the module resolves and can run a container against the
+  pinned engine. Placeholder for the real `check` until app code lands.
+  """
+  pub check: Void @check {
+    workContainer.withExec(["test", "-f", "README.md"]).sync
+    null
+  }
+
+  """
+  The repository as the module sees it. Confirms the workspace is mounted.
+  """
+  pub tree: String! {
+    workContainer
+      .withExec(["find", ".", "-maxdepth", "2", "-not", "-path", "./.git/*"])
+      .stdout
+  }
+}
