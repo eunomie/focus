@@ -79,6 +79,22 @@ dagger call focus apk export --path=/tmp/focus.apk # build the app
 The `android` module builds a JDK 21 + Android SDK 36 + Gradle container and
 exposes `gradle(source, task)`; `focus.apk` composes it into the app build.
 
+## Signing keys
+
+Nothing signing-related is committed. The debug keystore lives at
+`~/.focus/debug.jks` and reaches the build as a Dagger secret, configured once:
+
+```sh
+keytool -genkeypair -v -keystore ~/.focus/debug.jks -storepass android \
+  -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 \
+  -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+dagger settings focus debugKeystore 'cmd:cat $HOME/.focus/debug.jks'
+```
+
+Without it the build still works, using Gradle's own debug key — but that key is
+regenerated in every container, so `adb install -r` over a previous build fails
+and each install needs an uninstall first.
+
 ## Working with the phone
 
 Installing on the Pixel needs no cable. On the phone: Settings → System →

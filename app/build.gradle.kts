@@ -18,16 +18,18 @@ android {
         versionName = "0.1"
     }
 
-    // Every Dagger build runs in a fresh container, which would otherwise generate a new
-    // debug keystore each time and make `adb install -r` fail. This is the standard Android
-    // debug key -- well-known password, nothing secret -- committed so rebuilds install over
-    // the top.
     signingConfigs {
-        getByName("debug") {
-            storeFile = rootProject.file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+        // Supplied by the Dagger build as a secret, because every container would otherwise
+        // generate a fresh debug key and `adb install -r` would fail. Absent, Gradle uses
+        // its own generated debug key. The password is the Android default; the key file
+        // is the part worth keeping private.
+        System.getenv("FOCUS_DEBUG_KEYSTORE")?.let { keystore ->
+            getByName("debug") {
+                storeFile = file(keystore)
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
         // Supplied by the Dagger release pipeline as secrets. Absent for ordinary builds,
         // in which case the release variant is simply left unsigned rather than failing.

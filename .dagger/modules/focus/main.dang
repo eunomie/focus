@@ -6,9 +6,36 @@ type Focus {
   """
   pub source: Directory!
 
-  new(ws: Workspace!, sourcePath: String! = "/") {
+  """
+  Keystore used to sign debug builds.
+
+  Kept out of the repository: publishing a debug key would let anyone build an APK
+  with this application id and the same signature, and Android lets a matching
+  signature update an installed app while inheriting its adb-granted permissions.
+
+  When unset, Gradle falls back to its own generated debug key — which works, but is
+  regenerated in every container, so `adb install -r` over a previous build fails.
+  """
+  pub debugKeystore: Secret = null
+
+  new(ws: Workspace!, sourcePath: String! = "/", debugKeystore: Secret = null) {
     self.source = ws.directory(sourcePath)
+    self.debugKeystore = debugKeystore
     self
+  }
+
+  """
+  A build container with the debug keystore mounted, when one was provided.
+  """
+  let debugWorkspace: Container! {
+    let base = android.workspace(source)
+    if (debugKeystore != null) {
+      base
+        .withMountedSecret("/run/secrets/debug.jks", debugKeystore)
+        .withEnvVariable("FOCUS_DEBUG_KEYSTORE", "/run/secrets/debug.jks")
+    } else {
+      base
+    }
   }
 
   """
@@ -26,8 +53,8 @@ type Focus {
   the previous build.
   """
   pub apk: File! {
-    android
-      .gradle(source: source, task: ":app:assembleDebug")
+    debugWorkspace
+      .withExec(["gradle", "--no-daemon", "--console=plain", ":app:assembleDebug"])
       .file("/work/app/build/outputs/apk/debug/app-debug.apk")
   }
 

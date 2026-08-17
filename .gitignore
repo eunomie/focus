@@ -3,3 +3,7 @@
 build/
 local.properties
 *.apk
+
+# Signing keys live in ~/.focus, never in the repo
+*.jks
+*.keystore

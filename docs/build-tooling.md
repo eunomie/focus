@@ -91,6 +91,17 @@ Two things that need care:
 - **No Gradle wrapper.** Gradle is pinned in the toolchain container instead,
   which keeps a binary jar out of the repo. Revisit if the app ever needs
   building outside Dagger.
-- **The debug keystore is committed.** It is the standard Android debug key with
-  its well-known password, so there is nothing secret in it, and without it every
-  containerised build would generate a fresh one and `adb install -r` would fail.
+- **The debug keystore lives in `~/.focus/debug.jks`, never in the repo.** A
+  published debug key would let anyone build an APK with this application id and
+  the same signature, and Android lets a matching signature update an installed
+  app while inheriting its adb-granted permissions — which here includes
+  `WRITE_SECURE_SETTINGS`. It reaches the build as a Dagger secret:
+
+  ```sh
+  dagger settings focus debugKeystore 'cmd:cat $HOME/.focus/debug.jks'
+  ```
+
+  The `cmd:` form keeps a machine-specific path out of the committed config.
+  Without the setting Gradle falls back to its own generated debug key, which
+  builds fine but is regenerated per container, so `adb install -r` over a
+  previous build fails.

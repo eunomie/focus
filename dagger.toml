@@ -1,6 +1,20 @@
 [modules.dagger-dang-sdk]
 source = "github.com/dagger/dang-sdk"
 
+[modules.focus]
+source = ".dagger/modules/focus"
+
+[modules.focus.settings]
+debugKeystore = "cmd:cat $HOME/.focus/debug.jks"
+
+# Path to the debug keystore, deliberately not committed -- see the module docs.
+# Set it locally, it is personal to the machine:
+#   dagger settings focus debugKeystore "file://$HOME/.focus/debug.jks"
+# debugKeystore = "file:///home/you/.focus/debug.jks"
+
+[modules.android]
+source = ".dagger/modules/android"
+
 [modules.dagger-dang-sdk.as-sdk]
 name = "dang"
 
@@ -9,9 +23,3 @@ path = ".dagger/modules/focus"
 
 [[modules.dagger-dang-sdk.as-sdk.modules]]
 path = ".dagger/modules/android"
-
-[modules.focus]
-source = ".dagger/modules/focus"
-
-[modules.android]
-source = ".dagger/modules/android"
