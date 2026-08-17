@@ -68,26 +68,17 @@ class FocusSettings(private val context: Context) {
 
     suspend fun toggleApp(packageName: String) {
         context.dataStore.edit { prefs ->
-            val current = prefs.allowedList()
-            val updated = when {
-                packageName in current -> current - packageName
-                current.size >= MAX_ALLOWED_APPS -> current
-                else -> current + packageName
-            }
-            prefs[ALLOWED] = updated.joinToString("\n")
+            prefs[ALLOWED] = AllowedApps
+                .toggle(prefs.allowedList(), packageName, MAX_ALLOWED_APPS)
+                .joinToString("\n")
         }
     }
 
     suspend fun moveApp(packageName: String, delta: Int) {
         context.dataStore.edit { prefs ->
-            val current = prefs.allowedList().toMutableList()
-            val from = current.indexOf(packageName)
-            val to = from + delta
-            if (from < 0 || to !in current.indices) return@edit
-            val moved = current[from]
-            current[from] = current[to]
-            current[to] = moved
-            prefs[ALLOWED] = current.joinToString("\n")
+            prefs[ALLOWED] = AllowedApps
+                .move(prefs.allowedList(), packageName, delta)
+                .joinToString("\n")
         }
     }
 }

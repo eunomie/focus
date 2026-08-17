@@ -12,19 +12,26 @@ dagger.toml                          workspace: dang SDK + local modules
 ```
 
 ```sh
-dagger check                                            # ✔ focus:check
-dagger call android versions                            # JDK / Gradle / SDK in the toolchain
+dagger check                                        # unit tests + Android lint
+dagger call android versions                        # JDK / Gradle / SDK in the toolchain
+dagger call focus apk export --path=/tmp/focus.apk  # debug APK
+dagger call focus lint-report export --path=/tmp/lint.txt
 ```
 
 The `android` module builds a JDK 21 container with pinned Android
 cmdline-tools, platform 36, build-tools 36.0.0 and Gradle 8.14.3, accepts the
 SDK licences in the same cached layer, and exposes a `gradle(source, task)`
-runner with the Gradle home mounted as a cache volume. It was proven end-to-end building the
-platform spike, and currently has no consumer — wiring `focus.apk` onto it is
-the first build job once app code lands.
+runner with the Gradle home mounted as a cache volume. The `focus` module composes
+it into `check`, `apk` and `release-apk`.
 
-`focus:check` still only asserts that the workspace mounts and a container runs.
-It stays a placeholder until there is app code with real tests.
+`focus:check` runs `:app:testDebugUnitTest` and `:app:lintDebug`. Lint is not
+decoration: on its first real run it caught `AutomaticZenRule.Builder` being an
+API 35 call under a `minSdk` of 34, which would have been a `NoSuchMethodError`
+on any device older than the one it was developed against.
+
+The tests cover the allowed-app list rules — the cap and the reordering
+arithmetic — which are the only part of the app pure enough to test without a
+device. `AllowedApps` exists as plain functions for exactly that reason.
 
 ## Language choice: dang first, Java SDK as fallback
 
@@ -50,26 +57,40 @@ The caching argument that motivated the split still holds and is met anyway: the
 slow SDK layer is a distinct `toolchain` function, so it caches independently of
 the Gradle invocations layered on top of it.
 
-## Planned shape, once the real app exists
+## Releases
 
-Deliberately not built yet. Recorded here so the intent survives.
-
+```sh
+export FOCUS_STORE_PASSWORD=… FOCUS_KEY_PASSWORD=…
+dagger call focus release-apk \
+  --keystore=file:/path/to/focus.jks \
+  --store-password=env:FOCUS_STORE_PASSWORD \
+  --key-password=env:FOCUS_KEY_PASSWORD \
+  export --path=/tmp/focus-release.apk
 ```
-focus  (dang)
-  check     unit tests + lint + detekt/ktlint
-  build     debug + release APK artifacts
-  sign      release signing from a secret keystore
-  release   versioned APK for GitHub Releases
-```
 
-Three things that need care:
+The keystore is mounted as a Dagger secret and the passwords are secret
+environment variables, so none of them land in the repository, the build cache
+or an image layer. Gradle reads them through `FOCUS_*` env vars; when they are
+absent the release variant is simply left unsigned rather than failing, which
+keeps ordinary `assembleRelease` runs working.
+
+Still open, and deliberately not built yet:
+
+- **Code shrinking.** `isMinifyEnabled` is off. R8 with Compose usually works but
+  can fail in ways only visible at runtime, and nothing yet depends on a smaller
+  APK.
+- **A lint baseline.** Eleven warnings remain, mostly dependency-version notices.
+  Warnings do not fail the build; errors do.
+- **detekt or ktlint.** Both are new Gradle plugins, so worth agreeing before
+  adding rather than slipping one in.
+
+Two things that need care:
 
 - **Android SDK licences.** Accepted non-interactively inside the `android`
   module's `toolchain`, so it is done once and cached rather than per build.
-- **No Gradle wrapper.** The spike project has none; Gradle is installed in the
-  toolchain container at a pinned version instead, which keeps a binary jar out
-  of the repo. Revisit if the app ever needs to be built outside Dagger.
-- **Signing keys.** Release signing needs a keystore as a Dagger secret, never
-  a file in the repo. Debug builds use the standard debug keystore and need no
-  secret at all — which covers everything until there is something to
-  distribute.
+- **No Gradle wrapper.** Gradle is pinned in the toolchain container instead,
+  which keeps a binary jar out of the repo. Revisit if the app ever needs
+  building outside Dagger.
+- **The debug keystore is committed.** It is the standard Android debug key with
+  its well-known password, so there is nothing secret in it, and without it every
+  containerised build would generate a fresh one and `adb install -r` would fail.

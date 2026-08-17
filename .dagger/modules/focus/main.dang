@@ -11,40 +11,53 @@ type Focus {
     self
   }
 
-  let base: Container! {
-    container.from("alpine:3.22")
-  }
-
-  let workContainer: Container! {
-    base
-      .withDirectory("/work", source)
-      .withWorkdir("/work")
-  }
-
   """
-  Smoke test proving the module resolves and can run a container against the
-  pinned engine. Placeholder for the real `check` until app code lands.
+  Unit tests and Android lint. The tests cover the allowed-app list rules, which are
+  the only part of the app that is pure enough to test without a device.
   """
   pub check: Void @check {
-    workContainer.withExec(["test", "-f", "README.md"]).sync
+    android.gradle(source: source, task: ":app:testDebugUnitTest").sync
+    android.gradle(source: source, task: ":app:lintDebug").sync
     null
   }
 
   """
-  The repository as the module sees it. Confirms the workspace is mounted.
-  """
-  pub tree: String! {
-    workContainer
-      .withExec(["find", ".", "-maxdepth", "2", "-not", "-path", "./.git/*"])
-      .stdout
-  }
-
-  """
-  The app, as a debug APK to sideload onto the Pixel.
+  The app as a debug APK, signed with the committed debug key so it installs over
+  the previous build.
   """
   pub apk: File! {
     android
       .gradle(source: source, task: ":app:assembleDebug")
       .file("/work/app/build/outputs/apk/debug/app-debug.apk")
+  }
+
+  """
+  A signed release APK.
+
+  The keystore never touches the repository or the build cache as a file — it is
+  mounted as a secret, and the passwords are secret environment variables that Gradle
+  reads at configuration time.
+  """
+  pub releaseApk(
+    keystore: Secret!,
+    storePassword: Secret!,
+    keyPassword: Secret!,
+    keyAlias: String! = "focus",
+  ): File! {
+    android
+      .workspace(source)
+      .withMountedSecret("/run/secrets/focus.jks", keystore)
+      .withEnvVariable("FOCUS_KEYSTORE", "/run/secrets/focus.jks")
+      .withEnvVariable("FOCUS_KEY_ALIAS", keyAlias)
+      .withSecretVariable("FOCUS_STORE_PASSWORD", storePassword)
+      .withSecretVariable("FOCUS_KEY_PASSWORD", keyPassword)
+      .withExec(["gradle", "--no-daemon", "--console=plain", ":app:assembleRelease"])
+      .file("/work/app/build/outputs/apk/release/app-release.apk")
+  }
+
+  pub lintReport: File! {
+    android
+      .gradle(source: source, task: ":app:lintDebug")
+      .file("/work/app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt")
   }
 }

@@ -1,11 +1,13 @@
 package dev.eunomie.focus.domain
 
+import android.annotation.SuppressLint
 import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.toColorInt
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import java.io.File
@@ -53,6 +55,11 @@ class Wallpapers(private val context: Context) {
      * Only backs up once per focus session — re-running mid-session would capture the
      * focus wallpaper itself and lose the original for good.
      */
+    // Lint believes this needs MANAGE_EXTERNAL_STORAGE or READ_WALLPAPER_INTERNAL. On
+    // Android 17 the actual gate is READ_MEDIA_IMAGES, verified on the device, and that
+    // is adb-grantable where the other two are not. The call is wrapped anyway, and a
+    // failed read simply means the wallpaper is left alone.
+    @SuppressLint("MissingPermission")
     private fun backupCurrent(): Boolean {
         if (hasBackup) return true
         val bitmap = runCatching {
@@ -71,12 +78,12 @@ class Wallpapers(private val context: Context) {
      * instead of one frozen into a bitmap.
      */
     private fun render(width: Int, height: Int, appNames: List<String>): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(width, height)
         val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.parseColor("#08090B"))
+        canvas.drawColor("#08090B".toColorInt())
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#5F6874")
+            color = "#5F6874".toColorInt()
             textSize = width * 0.052f
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
             textAlign = Paint.Align.CENTER

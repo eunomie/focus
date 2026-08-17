@@ -10,8 +10,9 @@ android {
 
     defaultConfig {
         applicationId = "dev.eunomie.focus"
-        // AutomaticZenRule.Builder and ZenPolicy's people-type constants are API 34+.
-        minSdk = 34
+        // AutomaticZenRule.Builder is API 35, not 34 — lint caught this, and on a 34
+        // device it would have been a NoSuchMethodError the moment focus mode started.
+        minSdk = 35
         targetSdk = 36
         versionCode = 1
         versionName = "0.1"
@@ -27,6 +28,22 @@ android {
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+        }
+        // Supplied by the Dagger release pipeline as secrets. Absent for ordinary builds,
+        // in which case the release variant is simply left unsigned rather than failing.
+        System.getenv("FOCUS_KEYSTORE")?.let { keystore ->
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = System.getenv("FOCUS_STORE_PASSWORD")
+                keyAlias = System.getenv("FOCUS_KEY_ALIAS")
+                keyPassword = System.getenv("FOCUS_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
@@ -47,4 +64,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.3")
+
+    testImplementation("junit:junit:4.13.2")
 }
