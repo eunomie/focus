@@ -17,10 +17,11 @@ git config user.email "yves.brissaud@gmail.com"
 Local to this repo only, never `--global`. `Signed-off-by:` trailers use the
 same personal address.
 
-**No app code yet, but the design is finished.** Scope is settled in
-[ADR 5](docs/decisions/0005-v1-scope.md) and [ADR 6](docs/decisions/0006-device-state-effects.md),
-and every platform mechanism it depends on was verified on the real Pixel 6 —
-the throwaway spike that proved them has been deleted. Next step is building v1.
+**v1 is built.** Scope is settled in [ADR 5](docs/decisions/0005-v1-scope.md)
+and [ADR 6](docs/decisions/0006-device-state-effects.md), and every platform
+mechanism it depends on was verified on the real Pixel 6. `FocusController` is
+the whole state machine — read its comments before changing any transition, as
+each one records a failure that is not obvious from the code.
 
 **No AI attribution.** Not in commits, patches, PR titles or bodies. No
 `Co-Authored-By` lines for agents.

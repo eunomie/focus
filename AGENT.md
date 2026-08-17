@@ -14,15 +14,15 @@ The one locked-in requirement:
 > smaller, lighter, focus-oriented launcher — minimal apps, minimal
 > notifications — with a clear way back to the classic launcher.
 
-Everything else is being designed. The current design lives in
+The design behind it lives in
 [`docs/design/focus-launcher.html`](docs/design/focus-launcher.html) — open it
 in a browser, it is a self-contained HTML doc with mockups and diagrams.
 
 ## Status
 
-**Scope settled, no app code yet.** The design has been reviewed and all eight
-open questions answered — see [ADR 5](docs/decisions/0005-v1-scope.md) for the
-answers, which are the authoritative statement of what v1 is.
+**v1 is built and in daily use.** The design was reviewed, all eight open
+questions answered ([ADR 5](docs/decisions/0005-v1-scope.md)), then two more
+added ([ADR 6](docs/decisions/0006-device-state-effects.md)).
 
 The platform spike is **done and deleted** — every mechanism the design depends
 on was verified on the real Pixel 6 running Android 17. The results are in
@@ -30,11 +30,13 @@ on was verified on the real Pixel 6 running Android 17. The results are in
 [ADR 6](docs/decisions/0006-device-state-effects.md), and those ADRs say where
 in git history to find the working probe code.
 
-**Nothing in the design now rests on an unverified assumption.** What remains is
-building v1 as scoped in [ADR 5](docs/decisions/0005-v1-scope.md) and ADR 6.
+**Nothing in the design rests on an unverified assumption**, and the app is
+built against those findings. `FocusController` is the whole state machine;
+start there.
 
 What exists today:
 
+- `app/` — the launcher itself. Kotlin + Compose, one Gradle module.
 - The design doc + mockups (`docs/`), and the settled scope in ADR 5 + ADR 6.
 - Six ADRs, all Accepted, all backed by on-device measurement where they make a
   platform claim.
@@ -45,6 +47,7 @@ What exists today:
 ## Repo layout
 
 ```
+app/                       the launcher (Kotlin + Compose)
 AGENT.md                   this file
 CLAUDE.md                  pointer to this file + the non-negotiables
 dagger.toml                Dagger workspace: dang SDK + local modules
@@ -68,14 +71,13 @@ written in **dang**; the **Java SDK** (`dagger/java-sdk`) is the fallback for
 modules that need more logic than dang expresses comfortably.
 
 ```sh
-dagger check                  # run all checks
-dagger call android versions  # what's in the toolchain
+dagger check                                       # run all checks
+dagger call android versions                       # what's in the toolchain
+dagger call focus apk export --path=/tmp/focus.apk # build the app
 ```
 
 The `android` module builds a JDK 21 + Android SDK 36 + Gradle container and
-exposes `gradle(source, task)`. It has no consumer right now — the spike that
-exercised it is gone and the app has not landed — so the first job when app code
-appears is wiring `focus.apk` back onto it.
+exposes `gradle(source, task)`; `focus.apk` composes it into the app build.
 
 ## Working with the phone
 
@@ -98,8 +100,16 @@ never at runtime:
 ```sh
 adb shell pm grant <pkg> android.permission.WRITE_SECURE_SETTINGS
 adb shell pm grant <pkg> android.permission.READ_MEDIA_IMAGES
-adb shell cmd notification allow_listener <pkg>/<pkg>.NotificationListener
-adb shell cmd notification allow_dnd <pkg>
+adb shell cmd notification allow_listener dev.eunomie.focus/dev.eunomie.focus.service.FocusNotificationListener
+adb shell cmd notification allow_dnd dev.eunomie.focus
+```
+
+Reinstalling resets component enabled state to the manifest default, which
+disables `FocusHomeActivity` and drops focus mode. That is normal Android
+behaviour, but during development it means:
+
+```sh
+adb shell pm enable dev.eunomie.focus/dev.eunomie.focus.ui.FocusHomeActivity
 ```
 
 ## Git identity — important

@@ -10,8 +10,8 @@ Built for one phone and one person. Not a product.
 
 ## Status
 
-**Design done, verified on device.** Every platform mechanism the design relies
-on was proven on a Pixel 6 running Android 17. Next step is building v1.
+**v1 built and running** on a Pixel 6 (Android 17). Every platform mechanism it
+relies on was proven on the device first.
 
 - **[Design doc + mockups](docs/design/focus-launcher.html)** — open in a
   browser; self-contained HTML.
@@ -21,8 +21,11 @@ on was proven on a Pixel 6 running Android 17. Next step is building v1.
 ## Development
 
 ```sh
-dagger check    # run all checks
+dagger check                                       # run all checks
+dagger call focus apk export --path=/tmp/focus.apk # build the app
 ```
+
+Installing needs a one-time set of grants — see [AGENT.md](AGENT.md).
 
 See [AGENT.md](AGENT.md) for the full orientation.
 
