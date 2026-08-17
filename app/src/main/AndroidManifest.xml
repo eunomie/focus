@@ -29,6 +29,8 @@
 
     <application
         android:name=".FocusApp"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Focus">
@@ -82,7 +84,7 @@
         <service
             android:name=".service.FocusTileService"
             android:exported="true"
-            android:icon="@android:drawable/ic_lock_silent_mode"
+            android:icon="@drawable/ic_tile_focus"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
