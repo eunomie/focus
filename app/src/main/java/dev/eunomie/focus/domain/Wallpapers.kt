@@ -3,6 +3,8 @@ package dev.eunomie.focus.domain
 import android.annotation.SuppressLint
 import android.app.WallpaperManager
 import android.content.Context
+import android.util.Log
+import android.view.WindowManager
 import android.graphics.Bitmap
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.toColorInt
@@ -26,6 +28,8 @@ import java.io.FileOutputStream
  */
 class Wallpapers(private val context: Context) {
 
+    private companion object { const val TAG = "FocusWallpapers" }
+
     private val manager get() = WallpaperManager.getInstance(context)
     private val backupFile get() = File(context.filesDir, "wallpaper-backup.png")
 
@@ -34,13 +38,18 @@ class Wallpapers(private val context: Context) {
     fun apply(appNames: List<String>): Boolean {
         if (!backupCurrent()) return false
         return runCatching {
-            val width = manager.desiredMinimumWidth.takeIf { it > 0 } ?: 1080
-            val height = manager.desiredMinimumHeight.takeIf { it > 0 } ?: 2400
-            val bitmap = render(width, height, appNames)
+            // Screen size, not desiredMinimumWidth: Android asks for a double-width
+            // canvas (4800 on this device) so the home screen can pan, and rendering into
+            // that put the text at the canvas centre — outside the window the lock screen
+            // actually shows — at a text size scaled to 4800 rather than to the display.
+            val bounds = context.getSystemService(WindowManager::class.java)
+                .maximumWindowMetrics.bounds
+            val bitmap = render(bounds.width(), bounds.height(), appNames)
+            Log.i(TAG, "rendering wallpaper at ${bounds.width()}x${bounds.height()} for ${appNames.size} apps")
             manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
             manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
             true
-        }.getOrDefault(false)
+        }.onFailure { Log.w(TAG, "could not set the wallpaper", it) }.getOrDefault(false)
     }
 
     fun restore(): Boolean = runCatching {
@@ -66,7 +75,15 @@ class Wallpapers(private val context: Context) {
             manager.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)?.use { descriptor ->
                 BitmapFactory.decodeFileDescriptor(descriptor.fileDescriptor)
             }
-        }.getOrNull() ?: return false
+        }.onFailure {
+            // Never swallow this: without the reason, "the wallpaper did not change" is
+            // indistinguishable from a missing permission, and the effect is gated on
+            // the backup succeeding.
+            Log.w(TAG, "cannot read the current wallpaper, leaving it alone", it)
+        }.getOrNull() ?: run {
+            Log.w(TAG, "no current wallpaper to back up, leaving it alone")
+            return false
+        }
         return runCatching {
             FileOutputStream(backupFile).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             true

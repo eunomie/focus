@@ -43,7 +43,7 @@ Moved from the v2 "allowed contacts" nice-to-have into **v1 core**.
 | Always-on display | `Settings.Secure.doze_always_on` | `WRITE_SECURE_SETTINGS` (adb) |
 | No lock-screen notifications | `Settings.Secure.lock_screen_show_notifications` | `WRITE_SECURE_SETTINGS` (adb) |
 | Lock + home wallpaper | `WallpaperManager.setBitmap(…, FLAG_LOCK / FLAG_SYSTEM)` | `SET_WALLPAPER` (normal) |
-| Reading it back to restore | `WallpaperManager.getWallpaperFile(FLAG_SYSTEM)` | `READ_MEDIA_IMAGES` (adb) |
+| Reading it back to restore | `WallpaperManager.getWallpaperFile(FLAG_SYSTEM)` | `READ_MEDIA_IMAGES` **and** `READ_EXTERNAL_STORAGE` (adb) |
 
 Every row verified on the target device, Pixel 6 / Android 17.
 
@@ -52,6 +52,11 @@ for it. Apps that appear to do this draw an activity over the keyguard with
 `showWhenLocked` — fragile, security-degrading, and broken by most releases.
 This is the same wall that made Fairphone ship Moments as a privileged system
 app, and it is not worth climbing on a daily driver.
+
+The wallpaper must be rendered at the **screen** size, not
+`WallpaperManager.desiredMinimumWidth` — Android asks for a double-width canvas
+(4800px on a Pixel 6) so the home screen can pan, and rendering into that puts
+the content at the centre of a canvas the lock screen never shows.
 
 What replaces it: the lock wallpaper is rendered from the same Compose code as
 the focus home screen, laid out so the *system* clock occupies the top band and
@@ -90,13 +95,16 @@ level, therefore impossible — and designed around it with a setup step where t
 user nominates a "normal" wallpaper for the app to hoard a copy of. That was
 wrong, and the spike found it.
 
-The actual gate on Android 17 is `READ_MEDIA_IMAGES`, a *runtime* permission.
-`READ_EXTERNAL_STORAGE` is what `WallpaperManager` historically checked and is
-still worth declaring, but on API 33+ it is superseded and ignored. Both grant
-cleanly over `adb`, which is a channel the app already uses:
+The actual gate on Android 17 needs **both** `READ_MEDIA_IMAGES` and the legacy
+`READ_EXTERNAL_STORAGE`, which `WallpaperManager` still checks on the read path.
+Both are runtime permissions and both grant cleanly over `adb`, a channel the
+app already uses. Declaring only `READ_MEDIA_IMAGES` — the one the spike's final
+experiment identified — is not enough, and was how the real app shipped with a
+silently failing backup:
 
 ```sh
 adb shell pm grant <pkg> android.permission.READ_MEDIA_IMAGES
+adb shell pm grant <pkg> android.permission.READ_EXTERNAL_STORAGE
 ```
 
 Verified on device: `getWallpaperFile(FLAG_SYSTEM)` returns the live wallpaper

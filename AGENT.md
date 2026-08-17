@@ -100,6 +100,7 @@ never at runtime:
 ```sh
 adb shell pm grant <pkg> android.permission.WRITE_SECURE_SETTINGS
 adb shell pm grant <pkg> android.permission.READ_MEDIA_IMAGES
+adb shell pm grant <pkg> android.permission.READ_EXTERNAL_STORAGE
 adb shell cmd notification allow_listener dev.eunomie.focus/dev.eunomie.focus.service.FocusNotificationListener
 adb shell cmd notification allow_dnd dev.eunomie.focus
 ```

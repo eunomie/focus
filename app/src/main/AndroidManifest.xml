@@ -12,6 +12,12 @@
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- WallpaperManager still checks the legacy permission on the path that reads the
+         current wallpaper. Both were declared and granted when this was proven working
+         in the spike; dropping this one is why the backup silently failed. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <!-- Without the LAUNCHER entry, package visibility hides almost every app from
          LauncherApps whenever Focus is not itself the launcher — which is exactly when
