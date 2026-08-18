@@ -3,7 +3,7 @@ package dev.eunomie.focus.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import dev.eunomie.focus.domain.FocusController
+import dev.eunomie.focus.FocusApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,7 +20,8 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         val pending = goAsync()
-        val controller = FocusController(context)
+        // The shared controller, so this cannot race FocusApp.onCreate's own reconcile.
+        val controller = (context.applicationContext as FocusApp).controller
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
                 controller.reconcile()

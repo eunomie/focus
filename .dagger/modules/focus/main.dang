@@ -45,7 +45,22 @@ type Focus {
   pub check: Void @check {
     android.gradle(source: source, task: ":app:testDebugUnitTest").sync
     android.gradle(source: source, task: ":app:lintDebug").sync
+    android.gradle(source: source, task: ":app:ktlintCheck").sync
+    android.gradle(source: source, task: ":app:detekt").sync
     null
+  }
+
+  """
+  Reformat the Kotlin sources in place. Returns the changes rather than a container, so
+  `dagger call focus format` writes them back into the working tree.
+  """
+  pub format: Changeset! @generate {
+    # Scoped to the sources: comparing all of /work would include Gradle's build
+    # outputs, so the changeset could never come back empty.
+    let formatted = android
+      .gradle(source: source, task: ":app:ktlintFormat")
+      .directory("/work/app/src")
+    formatted.changes(source.directory("app/src"))
   }
 
   """
@@ -88,4 +103,6 @@ type Focus {
       .gradle(source: source, task: ":app:lintDebug")
       .file("/work/app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt")
   }
+
+
 }

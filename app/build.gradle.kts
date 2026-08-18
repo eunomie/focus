@@ -2,6 +2,8 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("io.gitlab.arturbosch.detekt")
+    id("org.jlleitschuh.gradle.ktlint")
 }
 
 android {
@@ -58,6 +60,11 @@ android {
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 }
 
+detekt {
+    config.setFrom(rootProject.file("detekt.yml"))
+    buildUponDefaultConfig = true
+}
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.08.01"))
     implementation("androidx.compose.ui:ui")
@@ -68,4 +75,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.3")
 
     testImplementation("junit:junit:4.13.2")
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.8")
 }

@@ -8,19 +8,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeGestures
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,13 +36,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.lifecycleScope
-import dev.eunomie.focus.domain.AppEntry
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.eunomie.focus.FocusApp
+import dev.eunomie.focus.domain.AppEntry
 import dev.eunomie.focus.domain.FocusController
 import dev.eunomie.focus.service.FocusNotificationListener
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -103,9 +104,16 @@ private fun FocusHomeScreen(
     var date by remember { mutableStateOf(now("EEEE, d MMMM")) }
     var waiting by remember { mutableStateOf(0) }
 
+    // The app list is resolved off the main thread and only when the allowlist changes;
+    // it used to enumerate every launchable app, load its label and sort, on the UI thread
+    // once a second, forever, on the screen that is always visible.
+    val allowed by controller.allowedApps.collectAsStateWithLifecycle(emptyList())
+    LaunchedEffect(allowed) {
+        apps = withContext(Dispatchers.IO) { controller.allowedAppEntries() }
+    }
+
     LaunchedEffect(Unit) {
         while (true) {
-            apps = controller.allowedAppEntries()
             clock = now("HH:mm")
             date = now("EEEE, d MMMM")
             waiting = FocusNotificationListener.waitingCount

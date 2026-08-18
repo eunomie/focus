@@ -71,7 +71,9 @@ class SettingsActivity : ComponentActivity() {
                 SettingsScreen(
                     controller = controller,
                     onToggleApp = { pkg -> lifecycleScope.launch { controller.toggleApp(pkg) } },
-                    onToggleEffect = { fx -> lifecycleScope.launch { controller.toggleEffect(fx) } },
+                    onToggleEffect = { fx ->
+                        lifecycleScope.launch { controller.toggleEffect(fx) }
+                    },
                     onMoveApp = { pkg, d -> lifecycleScope.launch { controller.moveApp(pkg, d) } },
                 )
             }
@@ -103,7 +105,12 @@ private fun SettingsScreen(
                 fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = FocusInk,
-                modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 28.dp, bottom = 18.dp),
+                modifier = Modifier.padding(
+                    start = 22.dp,
+                    end = 22.dp,
+                    top = 28.dp,
+                    bottom = 18.dp,
+                ),
             )
         }
 

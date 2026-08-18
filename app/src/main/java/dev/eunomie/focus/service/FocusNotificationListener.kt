@@ -23,6 +23,11 @@ class FocusNotificationListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onListenerConnected() = refresh()
+
+    override fun onListenerDisconnected() {
+        // Otherwise the last count sticks on screen after the listener drops.
+        waitingCount = 0
+    }
     override fun onNotificationPosted(sbn: StatusBarNotification?) = refresh()
     override fun onNotificationRemoved(sbn: StatusBarNotification?) = refresh()
 
@@ -30,7 +35,8 @@ class FocusNotificationListener : NotificationListenerService() {
         scope.launch {
             val allowed = FocusSettings(applicationContext).allowedAppsNow().toSet()
             waitingCount = runCatching {
-                activeNotifications.orEmpty().count { it.packageName in allowed }
+                activeNotifications.orEmpty()
+                    .count { it.packageName in allowed && !it.isOngoing }
             }.getOrDefault(0)
         }
     }

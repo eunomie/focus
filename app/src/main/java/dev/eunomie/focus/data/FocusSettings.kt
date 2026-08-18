@@ -17,10 +17,16 @@ const val MAX_ALLOWED_APPS = 5
 private val Context.dataStore by preferencesDataStore("focus")
 
 private val ACTIVE = booleanPreferencesKey("focus_active")
+
 // Ordered, so the list on the focus screen is the order chosen here. A Set has no order
 // to preserve, hence the new key rather than a migration.
 private val ALLOWED = stringPreferencesKey("allowed_apps_ordered")
 private val DISABLED_EFFECTS = stringSetPreferencesKey("disabled_effects")
+
+// What focus mode actually changed, so it can be undone even if the process died before
+// exit ran, or if the effect toggles were edited while focus was active.
+private val APPLIED = booleanPreferencesKey("effects_applied")
+private val SNAPSHOT = stringPreferencesKey("device_snapshot")
 
 /**
  * `active` is the *intended* state, and is what reconciliation compares device state
@@ -39,6 +45,40 @@ class FocusSettings(private val context: Context) {
 
     suspend fun setActive(value: Boolean) {
         context.dataStore.edit { it[ACTIVE] = value }
+    }
+
+    /**
+     * Whether focus mode's effects are currently applied to the device. Written *after*
+     * applying and cleared *after* reverting, so a death mid-transition always errs
+     * towards "something still needs undoing" rather than silently stranding the device.
+     */
+    suspend fun isApplied(): Boolean = context.dataStore.data.first()[APPLIED] == true
+
+    suspend fun setApplied(value: Boolean) {
+        context.dataStore.edit { it[APPLIED] = value }
+    }
+
+    /** The device settings as they were before focus mode touched them. */
+    suspend fun deviceSnapshot(): Map<String, Int> = context.dataStore.data.first()[SNAPSHOT]
+        ?.split(";")
+        ?.filter { it.isNotEmpty() }
+        ?.mapNotNull { entry ->
+            val parts = entry.split("=")
+            if (parts.size != 2) return@mapNotNull null
+            val (key, value) = parts
+            value.toIntOrNull()?.let { key to it }
+        }
+        ?.toMap()
+        .orEmpty()
+
+    suspend fun setDeviceSnapshot(values: Map<String, Int>) {
+        context.dataStore.edit { prefs ->
+            if (values.isEmpty()) {
+                prefs.remove(SNAPSHOT)
+            } else {
+                prefs[SNAPSHOT] = values.entries.joinToString(";") { "${it.key}=${it.value}" }
+            }
+        }
     }
 
     private fun Preferences.allowedList(): List<String> =

@@ -3,14 +3,14 @@ package dev.eunomie.focus.domain
 import android.content.Context
 import android.util.Log
 import dev.eunomie.focus.data.Effect
-import dev.eunomie.focus.data.Effects
 import dev.eunomie.focus.data.FocusSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "FocusController"
 
@@ -36,8 +36,13 @@ class FocusController(context: Context) {
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** Stops the self-healing entry path from undoing an exit that is still in progress. */
-    private val exiting = AtomicBoolean(false)
+    /**
+     * Every transition runs under this. A boolean flag was not enough: it was read once at
+     * the top of the entry path and the rest of the work then ran unguarded, so an exit
+     * could complete while an in-flight entry was still writing, leaving the role released
+     * but the device still grey and silenced.
+     */
+    private val transition = Mutex()
     private val settings = FocusSettings(app)
     private val installedApps = InstalledApps(app)
 
@@ -46,7 +51,6 @@ class FocusController(context: Context) {
     val deviceState = DeviceState(app)
     val wallpapers = Wallpapers(app)
 
-    val active = settings.active
     val allowedApps = settings.allowedApps
     val effects = settings.effects
 
@@ -60,17 +64,13 @@ class FocusController(context: Context) {
     /** Call before requesting the role — see the class comment. */
     fun prepareForRoleRequest() = homeRole.enableHomeActivity()
 
-    fun enterAsync(): Job = scope.launch { enter() }
-
     /**
      * Applying focus mode has to survive the transition that triggers it: granting the
      * HOME role tears down the calling task and can take the process with it, killing any
      * background work half-done. The focus home screen appearing is proof the role landed,
      * so it re-asserts the effects itself rather than trusting whatever started it.
      */
-    fun ensureEnteredAsync(): Job = scope.launch {
-        if (!exiting.get() && homeRole.held) enter()
-    }
+    fun ensureEnteredAsync(): Job = scope.launch { enter() }
 
     fun exitAsync(): Job = scope.launch { exit() }
 
@@ -80,14 +80,24 @@ class FocusController(context: Context) {
      * effects forever. Re-asserting is cheap; the wallpaper is the only expensive part and
      * it is skipped when a backup already exists, which means it is already ours.
      */
-    suspend fun enter() {
+    suspend fun enter() = transition.withLock {
+        // Re-checked inside the lock: the role can be released by an exit that was waiting
+        // on it, and re-applying afterwards is exactly the strand this guards against.
+        if (!homeRole.held) return@withLock
+
         val effects = settings.effectsNow()
+        // Only snapshot when nothing is applied yet, or a re-assert would capture focus
+        // mode's own values as the thing to restore.
+        if (!settings.isApplied()) {
+            settings.setDeviceSnapshot(deviceState.snapshot())
+        }
         settings.setActive(true)
         if (effects.zen) zen.setActive(true)
-        deviceState.apply(focusActive = true, effects = effects)
+        deviceState.apply(effects)
         val wallpaperApplied = effects.wallpaper &&
             !wallpapers.hasBackup &&
             wallpapers.apply(allowedAppLabels())
+        settings.setApplied(true)
         Log.i(
             TAG,
             "enter: effects=$effects zenAccess=${zen.accessGranted} " +
@@ -97,45 +107,46 @@ class FocusController(context: Context) {
 
     /**
      * Releases the role *first*. While it is still held, anything that sends a HOME intent
-     * lands back on our own focus screen, which re-asserts the effects that are being
-     * undone — the exit and the self-healing entry path fight, and entry wins.
+     * lands back on our own focus screen, which re-asserts the effects being undone.
      */
-    suspend fun exit() {
-        exiting.set(true)
-        try {
-            val effects = settings.effectsNow()
-            settings.setActive(false)
-            homeRole.releaseRole()
-            if (effects.zen) zen.setActive(false)
-            deviceState.apply(focusActive = false, effects = effects)
-            val restored = wallpapers.restore()
-            Log.i(TAG, "exit: wallpaperRestored=$restored held=${homeRole.held}")
-        } finally {
-            exiting.set(false)
-        }
+    suspend fun exit() = transition.withLock {
+        homeRole.releaseRole()
+        revert()
+        Log.i(TAG, "exit: held=${homeRole.held}")
     }
 
-    suspend fun toggleEffect(effect: Effect) = settings.toggleEffect(effect)
+    /**
+     * Undo whatever is currently applied. The persisted records are cleared last, so a
+     * death part-way through leaves them set and the next reconcile finishes the job.
+     */
+    private suspend fun revert() {
+        zen.setActive(false)
+        deviceState.restore(settings.deviceSnapshot())
+        val restored = wallpapers.restore()
+        settings.setDeviceSnapshot(emptyMap())
+        settings.setApplied(false)
+        settings.setActive(false)
+        Log.i(TAG, "revert: wallpaperRestored=$restored")
+    }
 
     /**
      * Put the device back if the intended state and the actual state disagree.
      *
-     * Focus mode mutates four pieces of global device state, so a crash can strand all of
-     * them at once — a grey screen, an always-on display eating battery, hidden
-     * lock-screen notifications and the wrong wallpaper. Run on every app start and on
-     * boot, which are the two moments the app gets to notice.
+     * The role is the source of truth for whether focus mode is on; the persisted
+     * applied-record is the source of truth for whether anything still needs undoing.
+     * Probing one setting (greyscale) instead meant that switching the greyscale effect
+     * off and crashing left the always-on display and hidden lock-screen notifications
+     * stranded with nothing to detect them.
      */
-    suspend fun reconcile() {
-        // The role is the source of truth. Checking the persisted flag instead meant that
-        // a process restart between the role grant and the effects being applied looked
-        // like "focus is off", so reconciliation helpfully undid focus mode.
-        if (homeRole.held) return
-        if (settings.isActive()) settings.setActive(false)
-        // Unconditional, and it only touches our own rule: a stranded Do Not Disturb is
-        // the worst of the four to leave behind, since it silently eats calls.
-        zen.setActive(false)
-        if (deviceState.greyscaleOn) deviceState.clearAll()
-        if (wallpapers.hasBackup) wallpapers.restore()
+    suspend fun reconcile() = transition.withLock {
+        if (homeRole.held) return@withLock
+        val stranded = settings.isApplied() ||
+            settings.deviceSnapshot().isNotEmpty() ||
+            wallpapers.hasBackup ||
+            deviceState.greyscaleOn
+        if (!stranded) return@withLock
+        Log.i(TAG, "reconcile: focus is off but effects are still applied, reverting")
+        revert()
     }
 
     suspend fun allowedAppLabels(): List<String> =
@@ -152,4 +163,6 @@ class FocusController(context: Context) {
     suspend fun toggleApp(packageName: String) = settings.toggleApp(packageName)
 
     suspend fun moveApp(packageName: String, delta: Int) = settings.moveApp(packageName, delta)
+
+    suspend fun toggleEffect(effect: Effect) = settings.toggleEffect(effect)
 }

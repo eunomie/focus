@@ -3,9 +3,8 @@ package dev.eunomie.focus.service
 import android.content.Intent
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import dev.eunomie.focus.domain.FocusController
+import dev.eunomie.focus.FocusApp
 import dev.eunomie.focus.ui.ToggleActivity
-import kotlinx.coroutines.runBlocking
 
 /**
  * The primary trigger: reachable from inside any app, not just the home screen, and the
@@ -14,7 +13,7 @@ import kotlinx.coroutines.runBlocking
 class FocusTileService : TileService() {
 
     override fun onStartListening() {
-        val active = runBlocking { FocusController(this@FocusTileService).isActive() }
+        val active = (application as FocusApp).controller.isActive()
         qsTile?.apply {
             state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             subtitle = if (active) "On" else "Off"

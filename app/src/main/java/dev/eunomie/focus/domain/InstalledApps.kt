@@ -17,11 +17,10 @@ class InstalledApps(private val context: Context) {
 
     private val launcherApps get() = context.getSystemService(LauncherApps::class.java)
 
-    fun all(): List<AppEntry> =
-        launcherApps.getActivityList(null, Process.myUserHandle())
-            .map { AppEntry(it.applicationInfo.packageName, it.label.toString()) }
-            .distinctBy { it.packageName }
-            .sortedBy { it.label.lowercase() }
+    fun all(): List<AppEntry> = launcherApps.getActivityList(null, Process.myUserHandle())
+        .map { AppEntry(it.applicationInfo.packageName, it.label.toString()) }
+        .distinctBy { it.packageName }
+        .sortedBy { it.label.lowercase() }
 
     fun labelsFor(packageNames: List<String>): List<AppEntry> {
         val byPackage = all().associateBy { it.packageName }

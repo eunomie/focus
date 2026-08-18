@@ -7,6 +7,7 @@ import android.content.Context
 import android.net.Uri
 import android.service.notification.Condition
 import android.service.notification.ZenPolicy
+import android.util.Log
 import androidx.core.net.toUri
 import dev.eunomie.focus.ui.SettingsActivity
 
@@ -26,8 +27,14 @@ class ZenRules(private val context: Context) {
     val accessGranted: Boolean get() = notifications.isNotificationPolicyAccessGranted
 
     fun setActive(active: Boolean) {
-        if (!accessGranted) return
-        val id = existingRuleId() ?: createRule() ?: return
+        if (!accessGranted) {
+            Log.w(TAG, "no DND policy access, focus mode will not silence anything")
+            return
+        }
+        // Only create on the way in: reconciliation runs on every cold start, and creating
+        // a rule purely to set it false added a stray "Focus" entry to the user's DND
+        // settings on devices that had never entered focus mode.
+        val id = existingRuleId() ?: (if (active) createRule() else null) ?: return
         notifications.setAutomaticZenRuleState(
             id,
             Condition(
@@ -57,5 +64,9 @@ class ZenRules(private val context: Context) {
                 .setConfigurationActivity(ComponentName(context, SettingsActivity::class.java))
                 .build(),
         )
-    }.getOrNull()
+    }.onFailure { Log.w(TAG, "could not create the zen rule", it) }.getOrNull()
+
+    private companion object {
+        const val TAG = "FocusZenRules"
+    }
 }

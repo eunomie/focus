@@ -12,9 +12,10 @@ dagger.toml                          workspace: dang SDK + local modules
 ```
 
 ```sh
-dagger check                                        # unit tests + Android lint
-dagger call android versions                        # JDK / Gradle / SDK in the toolchain
-dagger call focus apk export --path=/tmp/focus.apk  # debug APK
+dagger check                     # unit tests + Android lint + ktlint + detekt
+dagger call -y focus format      # reformat the Kotlin sources in place
+dagger call android versions     # JDK / Gradle / SDK in the toolchain
+dagger call focus apk export --path=/tmp/focus.apk
 dagger call focus lint-report export --path=/tmp/lint.txt
 ```
 
@@ -32,6 +33,25 @@ on any device older than the one it was developed against.
 The tests cover the allowed-app list rules — the cap and the reordering
 arithmetic — which are the only part of the app pure enough to test without a
 device. `AllowedApps` exists as plain functions for exactly that reason.
+
+**ktlint** owns formatting and **detekt** owns static analysis; `check` fails on
+either. Both are configured down from their defaults, which are written for large
+teams and would otherwise bury real findings:
+
+- `.editorconfig` selects ktlint's `intellij_idea` style. The default
+  `ktlint_official` rewraps nearly every signature and multiline expression in
+  the project for no readability gain.
+- `detekt.yml` turns off `MagicNumber` and `TooManyFunctions`, and exempts
+  `@Composable` from `FunctionNaming` and `LongMethod` — composables are
+  PascalCase by convention and are layout trees that read worse when split.
+- `SwallowedException` is off because several `runCatching` blocks here degrade
+  on purpose. They must still log, which is a review rule rather than a lint
+  rule, since detekt cannot tell a logged degrade from a silent one.
+
+`dagger call -y focus format` applies ktlint's fixes. `format` is also a
+`@generate` check, so `dagger check` fails if the tree is unformatted. Its
+changeset is scoped to `app/src`: comparing all of `/work` would include Gradle's
+build outputs and could never come back clean.
 
 ## Language choice: dang first, Java SDK as fallback
 

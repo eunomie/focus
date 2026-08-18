@@ -1,0 +1,26 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 100
+# ktlint_official rewraps almost every signature and multiline expression in the project
+# for no readability gain; intellij_idea matches what the code already looks like.
+ktlint_code_style = intellij_idea
+
+# Composables are PascalCase by convention and test names read better as sentences in
+# backticks; ktlint's function-naming rule objects to both.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+ktlint_standard_function-naming = disabled
+
+[*.{xml,yml,yaml,toml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

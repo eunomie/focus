@@ -43,7 +43,11 @@ class ToggleActivity : ComponentActivity() {
         lifecycleScope.launch {
             val active = controller.isActive()
             val held = controller.homeRole.held
-            Log.i(TAG, "toggle: active=$active held=$held requestable=${controller.homeRole.requestable}")
+            Log.i(
+                TAG,
+                "toggle: active=$active held=$held " +
+                    "requestable=${controller.homeRole.requestable}",
+            )
 
             if (active) {
                 controller.exitAsync().invokeOnCompletion {
@@ -70,9 +74,15 @@ class ToggleActivity : ComponentActivity() {
         }
     }
 
-    /** Entering focus mode should *show* focus mode, not just arm it silently. */
+    /**
+     * Entering focus mode should *show* focus mode, not just arm it silently.
+     *
+     * Applying is left to the focus screen's own self-healing path rather than started
+     * here as well — doing both meant two concurrent enters on every single entry, which
+     * could mint duplicate zen rules and race the wallpaper backup into capturing focus
+     * mode's own wallpaper as the thing to restore.
+     */
     private fun enterAndShow() {
-        controller.enterAsync()
         startActivity(
             Intent(this, FocusHomeActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),

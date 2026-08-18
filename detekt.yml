@@ -1,0 +1,52 @@
+# Only the rules worth failing a build over for a one-person app. The defaults are tuned
+# for large teams and flag a lot that does not matter here.
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 70
+    # A composable is a layout tree written as one expression; splitting it to satisfy a
+    # line count usually makes it harder to read, not easier.
+    ignoreAnnotated: ['Composable']
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 8
+  TooManyFunctions:
+    active: false
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    # The whole point of several runCatching blocks here is to degrade gracefully, but
+    # they must log — enforced by review, not by this rule, which cannot tell them apart.
+    active: false
+
+naming:
+  FunctionNaming:
+    active: true
+    # Composables are PascalCase by Compose convention.
+    ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    active: false
+  ReturnCount:
+    active: true
+    max: 4
+  UnusedPrivateMember:
+    active: true
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: "TODOs without an owner rot. Put it in an ADR or fix it."
+        value: "TODO:"
+
+formatting:
+  active: false  # ktlint owns formatting

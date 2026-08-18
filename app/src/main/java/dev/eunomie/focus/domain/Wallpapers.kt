@@ -3,15 +3,15 @@ package dev.eunomie.focus.domain
 import android.annotation.SuppressLint
 import android.app.WallpaperManager
 import android.content.Context
-import android.util.Log
-import android.view.WindowManager
 import android.graphics.Bitmap
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.toColorInt
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.util.Log
+import android.view.WindowManager
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.toColorInt
 import java.io.File
 import java.io.FileOutputStream
 
@@ -28,7 +28,9 @@ import java.io.FileOutputStream
  */
 class Wallpapers(private val context: Context) {
 
-    private companion object { const val TAG = "FocusWallpapers" }
+    private companion object {
+        const val TAG = "FocusWallpapers"
+    }
 
     private val manager get() = WallpaperManager.getInstance(context)
     private val backupFile get() = File(context.filesDir, "wallpaper-backup.png")
@@ -45,7 +47,11 @@ class Wallpapers(private val context: Context) {
             val bounds = context.getSystemService(WindowManager::class.java)
                 .maximumWindowMetrics.bounds
             val bitmap = render(bounds.width(), bounds.height(), appNames)
-            Log.i(TAG, "rendering wallpaper at ${bounds.width()}x${bounds.height()} for ${appNames.size} apps")
+            Log.i(
+                TAG,
+                "rendering wallpaper at ${bounds.width()}x${bounds.height()} " +
+                    "for ${appNames.size} apps",
+            )
             manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
             manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
             true
@@ -53,12 +59,18 @@ class Wallpapers(private val context: Context) {
     }
 
     fun restore(): Boolean = runCatching {
-        val bitmap = BitmapFactory.decodeFile(backupFile.path) ?: return false
+        val bitmap = BitmapFactory.decodeFile(backupFile.path) ?: run {
+            // Keeping an undecodable backup would wedge things permanently: apply() skips
+            // while a backup exists, and restore() would retry the same bad file forever.
+            Log.w(TAG, "backup could not be decoded, discarding it")
+            backupFile.delete()
+            return false
+        }
         manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
         manager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
         backupFile.delete()
         true
-    }.getOrDefault(false)
+    }.onFailure { Log.w(TAG, "could not restore the wallpaper", it) }.getOrDefault(false)
 
     /**
      * Only backs up once per focus session — re-running mid-session would capture the
