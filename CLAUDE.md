@@ -6,17 +6,6 @@ things that are expensive to get wrong.
 
 ## Non-negotiables
 
-**Git identity.** This is a *personal* repo. Commits must use Yves's personal
-address, not the `yves@dagger.io` one used on his work repos:
-
-```sh
-git config user.name  "Yves Brissaud"
-git config user.email "yves.brissaud@gmail.com"
-```
-
-Local to this repo only, never `--global`. `Signed-off-by:` trailers use the
-same personal address.
-
 **v1 is built.** Scope is settled in [ADR 5](docs/decisions/0005-v1-scope.md)
 and [ADR 6](docs/decisions/0006-device-state-effects.md), and every platform
 mechanism it depends on was verified on the real Pixel 6. `FocusController` is

@@ -135,20 +135,6 @@ behaviour, but during development it means:
 adb shell pm enable dev.eunomie.focus/dev.eunomie.focus.ui.FocusHomeActivity
 ```
 
-## Git identity — important
-
-This is Yves's **personal** repo. Commits here must use his **personal**
-address, which is deliberately different from the `yves@dagger.io` identity used
-on his work repos:
-
-```sh
-git config user.name  "Yves Brissaud"
-git config user.email "yves.brissaud@gmail.com"
-```
-
-Set locally in this repo only — never `--global`. `Signed-off-by:` trailers must
-read `Signed-off-by: Yves Brissaud <yves.brissaud@gmail.com>`.
-
 ## Conventions
 
 - Small, deliberate commits. Stage specific paths; no blind `git add -A`.
