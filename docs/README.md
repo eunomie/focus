@@ -5,7 +5,7 @@
 ```
 docs/
   build-tooling.md   the Dagger toolchain: what exists now, what's planned
-  design/            design docs — self-contained HTML, mockups embedded
+  design/            design docs — self-contained HTML, published via Pages
   decisions/         ADRs — one short file per decision, with its why
 ```
 
@@ -34,6 +34,11 @@ diagrams, side-by-side comparisons. Markdown renders none of that without a
 toolchain, and a doc that needs a build step to be legible tends not to get
 read. A self-contained HTML file with inline SVG opens in any browser, on any
 machine, forever, with no dependencies.
+
+It also means they publish as-is. `design/` is served by GitHub Pages, so
+[focus-launcher.html](https://eunomie.github.io/focus/design/focus-launcher.html)
+is readable without cloning anything — which a Markdown link to an HTML file in
+the repo is not, since GitHub renders it as source.
 
 ADRs stay Markdown: they are prose, they are short, and they benefit from
 being readable in a diff.

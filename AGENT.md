@@ -14,9 +14,11 @@ The one locked-in requirement:
 > smaller, lighter, focus-oriented launcher — minimal apps, minimal
 > notifications — with a clear way back to the classic launcher.
 
-The design behind it lives in
-[`docs/design/focus-launcher.html`](docs/design/focus-launcher.html) — open it
-in a browser, it is a self-contained HTML doc with mockups and diagrams.
+The design behind it is published at
+<https://eunomie.github.io/focus/design/focus-launcher.html>. The source is
+[`docs/design/focus-launcher.html`](docs/design/focus-launcher.html) — a
+self-contained HTML file with mockups and diagrams; edit that, and the published
+page follows.
 
 ## Status
 

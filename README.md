@@ -13,8 +13,8 @@ Built for one phone and one person. Not a product.
 **v1 built and running** on a Pixel 6 (Android 17). Every platform mechanism it
 relies on was proven on the device first.
 
-- **[Design doc + mockups](docs/design/focus-launcher.html)** — open in a
-  browser; self-contained HTML.
+- **[Design doc + mockups](https://eunomie.github.io/focus/design/focus-launcher.html)** — the shape of the thing, with
+  phone mockups and diagrams.
 - [Decisions](docs/decisions/) — ADRs.
 - [Build tooling](docs/build-tooling.md) — Dagger, pinned to v1.0.0-beta.9.
 
