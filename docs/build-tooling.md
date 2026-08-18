@@ -12,7 +12,8 @@ dagger.toml                          workspace: dang SDK + local modules
 ```
 
 ```sh
-dagger check                     # unit tests + Android lint + ktlint + detekt
+dagger check                     # every check below, in parallel
+dagger check "focus:detekt"      # or just one
 dagger call -y focus format      # reformat the Kotlin sources in place
 dagger call android versions     # JDK / Gradle / SDK in the toolchain
 dagger call focus apk export --path=/tmp/focus.apk
@@ -25,7 +26,13 @@ SDK licences in the same cached layer, and exposes a `gradle(source, task)`
 runner with the Gradle home mounted as a cache volume. The `focus` module composes
 it into `check`, `apk` and `release-apk`.
 
-`focus:check` runs `:app:testDebugUnitTest` and `:app:lintDebug`. Lint is not
+Each check is its own function — `focus:unit-tests`, `focus:android-lint`,
+`focus:ktlint`, `focus:detekt` — rather than one function running four Gradle
+tasks in sequence. They run concurrently and report separately, so a whole run
+costs about as long as its slowest check instead of the sum of all four, and a
+failure names the tool that failed. Any one can be run alone while iterating.
+
+Lint is not
 decoration: on its first real run it caught `AutomaticZenRule.Builder` being an
 API 35 call under a `minSdk` of 34, which would have been a `NoSuchMethodError`
 on any device older than the one it was developed against.

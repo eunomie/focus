@@ -39,13 +39,34 @@ type Focus {
   }
 
   """
-  Unit tests and Android lint. The tests cover the allowed-app list rules, which are
-  the only part of the app that is pure enough to test without a device.
+  Unit tests. Covers the allowed-app list rules, which are the only part of the app
+  pure enough to test without a device.
   """
-  pub check: Void @check {
+  pub unitTests: Void @check {
     android.gradle(source: source, task: ":app:testDebugUnitTest").sync
+    null
+  }
+
+  """
+  Android lint: platform correctness, API levels, manifest problems.
+  """
+  pub androidLint: Void @check {
     android.gradle(source: source, task: ":app:lintDebug").sync
+    null
+  }
+
+  """
+  ktlint: formatting and code style.
+  """
+  pub ktlint: Void @check {
     android.gradle(source: source, task: ":app:ktlintCheck").sync
+    null
+  }
+
+  """
+  detekt: static analysis.
+  """
+  pub detekt: Void @check {
     android.gradle(source: source, task: ":app:detekt").sync
     null
   }
