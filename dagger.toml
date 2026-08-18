@@ -5,12 +5,11 @@ source = "github.com/dagger/dang-sdk"
 source = ".dagger/modules/focus"
 
 [modules.focus.settings]
-debugKeystore = "cmd:cat $HOME/.focus/debug.jks"
-
-# Path to the debug keystore, deliberately not committed -- see the module docs.
-# Set it locally, it is personal to the machine:
-#   dagger settings focus debugKeystore "file://$HOME/.focus/debug.jks"
-# debugKeystore = "file:///home/you/.focus/debug.jks"
+# The debug keystore is never committed -- see the module docs for why. Pass it per
+# call, which leaves this file untouched:
+#   dagger call focus --debug-keystore=file:$HOME/.focus/debug.jks apk export --path=/tmp/focus.apk
+# Setting it here instead would work, but `dagger settings` writes into this tracked
+# file, so a machine-specific path would end up committed.
 
 [modules.android]
 source = ".dagger/modules/android"

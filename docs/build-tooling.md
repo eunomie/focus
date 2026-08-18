@@ -98,10 +98,12 @@ Two things that need care:
   `WRITE_SECURE_SETTINGS`. It reaches the build as a Dagger secret:
 
   ```sh
-  dagger settings focus debugKeystore 'cmd:cat $HOME/.focus/debug.jks'
+  dagger call focus --debug-keystore=file:$HOME/.focus/debug.jks apk \\
+    export --path=/tmp/focus.apk
   ```
 
-  The `cmd:` form keeps a machine-specific path out of the committed config.
-  Without the setting Gradle falls back to its own generated debug key, which
-  builds fine but is regenerated per container, so `adb install -r` over a
-  previous build fails.
+  Passed per call rather than stored in `dagger.toml`, because `dagger settings`
+  writes into that tracked file and a machine-specific path would be committed.
+  Without it Gradle falls back to its own generated debug key, which builds fine
+  but is regenerated per container, so `adb install -r` over a previous build
+  fails.

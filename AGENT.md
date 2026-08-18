@@ -88,7 +88,13 @@ Nothing signing-related is committed. The debug keystore lives at
 keytool -genkeypair -v -keystore ~/.focus/debug.jks -storepass android \
   -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 \
   -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-dagger settings focus debugKeystore 'cmd:cat $HOME/.focus/debug.jks'
+```
+
+Then pass it to any build that needs a stable signature:
+
+```sh
+dagger call focus --debug-keystore=file:$HOME/.focus/debug.jks apk \
+  export --path=/tmp/focus.apk
 ```
 
 Without it the build still works, using Gradle's own debug key — but that key is

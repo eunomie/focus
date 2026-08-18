@@ -42,8 +42,8 @@ throwaway spike, since deleted. The working probe code is worth cribbing from
 when the real app implements these mechanisms:
 
 ```sh
-git show ae87bcf271eb:spike/app/src/main/java/dev/eunomie/focus/spike/Probe.kt
-git show ae87bcf271eb:spike/app/src/main/java/dev/eunomie/focus/spike/Wallpaper.kt
+git show b2f8e3720f0e:spike/app/src/main/java/dev/eunomie/focus/spike/Probe.kt
+git show b2f8e3720f0e:spike/app/src/main/java/dev/eunomie/focus/spike/Wallpaper.kt
 ```
 
 | Claim | Result |

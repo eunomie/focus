@@ -49,8 +49,9 @@ type Focus {
   }
 
   """
-  The app as a debug APK, signed with the committed debug key so it installs over
-  the previous build.
+  The app as a debug APK. Signed with the keystore from `debugKeystore` when one is
+  configured, so it installs over the previous build; nothing signing-related is
+  committed.
   """
   pub apk: File! {
     debugWorkspace
